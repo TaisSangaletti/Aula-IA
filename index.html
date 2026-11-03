@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f8">
+  <meta name="description" content="Acesse o ArtGallery, sistema de gestão para exposições de arte.">
+  <title>Entrar | ArtGallery</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/api.js" defer></script>
+  <script src="js/login.js" defer></script>
+</head>
+<body class="auth-page">
+  <main class="auth-card">
+    <div class="logo-container">
+      <img src="css/assets/logo.png" alt="ArtGallery Logo" class="logo-img">
+    </div>
+
+    <section id="login-view" class="auth-view" aria-labelledby="login-heading">
+      <div class="page-heading">
+        <p class="eyebrow">ACESSO RESTRITO</p>
+        <h1 id="login-heading">Bem-vindo de volta</h1>
+        <p class="muted">Entre com suas credenciais para acessar sua galeria.</p>
+      </div>
+
+      <form id="login-form" class="form-stack">
+        <label for="username">E-mail ou usuário</label>
+        <input id="username" name="username" type="text" autocomplete="username"
+          placeholder="voce@exemplo.com" aria-describedby="login-message" required>
+
+        <label for="password">Senha</label>
+        <input id="password" name="password" type="password" autocomplete="current-password"
+          placeholder="Digite sua senha" aria-describedby="login-message" required>
+
+        <p id="login-message" class="message" role="alert" aria-live="polite" hidden></p>
+        <button id="login-button" class="button button-primary button-wide" type="submit">
+          Entrar
+        </button>
+        <button id="show-register" class="button button-outline button-wide" type="button">
+          Criar Conta
+        </button>
+      </form>
+    </section>
+
+    <section id="register-view" class="auth-view" aria-labelledby="register-heading" hidden>
+      <div class="page-heading">
+        <p class="eyebrow">JUNTE-SE À GALERIA</p>
+        <h1 id="register-heading">Cadastro de Novo Usuário</h1>
+        <p class="muted">Crie seu acesso para acompanhar e gerir exposições.</p>
+      </div>
+
+      <form id="register-form" class="form-stack">
+        <label for="register-name">Nome completo</label>
+        <input id="register-name" name="nome" type="text" autocomplete="name"
+          placeholder="Seu nome completo" required>
+
+        <label for="register-cpf">CPF</label>
+        <input id="register-cpf" name="cpf" type="text" inputmode="numeric"
+          autocomplete="off" placeholder="000.000.000-00"
+          aria-describedby="cpf-hint" maxlength="14" required>
+        <small id="cpf-hint" class="muted">Digite os 11 números do CPF.</small>
+
+        <label for="register-birthdate">Data de nascimento</label>
+        <input id="register-birthdate" name="dataNascimento" type="date"
+          autocomplete="bday" required>
+
+        <label for="register-password">Senha</label>
+        <input id="register-password" name="senha" type="password" autocomplete="new-password"
+          placeholder="Crie uma senha" minlength="8" required>
+
+        <label for="register-company-id">ID da empresa</label>
+        <input id="register-company-id" name="empresa_id" type="number" inputmode="numeric"
+          min="0" step="1" placeholder="Ex.: 1" required>
+
+        <p id="register-message" class="message" role="status" aria-live="polite" hidden></p>
+        <button id="register-button" class="button button-primary button-wide" type="submit">
+          Cadastre-se
+        </button>
+        <button id="show-login" class="button button-outline button-wide" type="button">
+          Já tenho uma conta. Voltar ao Login
+        </button>
+      </form>
+    </section>
+
+    <p class="auth-footnote">Um espaço dedicado à gestão e à apreciação da arte.</p>
+  </main>
+</body>
+</html>

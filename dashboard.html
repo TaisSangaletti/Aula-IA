@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17283d">
+  <meta name="description" content="Painel administrativo do ArtGallery.">
+  <title>Painel | ArtGallery</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/api.js" defer></script>
+  <script src="js/dashboard.js" defer></script>
+</head>
+<body class="dashboard-page">
+  <aside class="sidebar" aria-label="Navegação principal">
+    <a class="sidebar-brand" href="#inicio" aria-label="ArtGallery, início" data-section-link="inicio">
+      <span class="sidebar-brand-name">Art<span>Gallery</span></span>
+      <span class="sidebar-brand-caption">GESTÃO DE EXPOSIÇÕES</span>
+    </a>
+
+    <p class="sidebar-label">MENU PRINCIPAL</p>
+    <nav class="sidebar-nav" aria-label="Seções do sistema">
+      <button class="nav-link is-active" type="button" data-section-link="inicio" aria-current="page">
+        <span class="nav-icon" aria-hidden="true">▦</span>
+        <span>Dashboard / Início</span>
+      </button>
+      <button class="nav-link" type="button" data-section-link="artistas">
+        <span class="nav-icon" aria-hidden="true">✦</span>
+        <span>Artistas</span>
+      </button>
+      <button class="nav-link" type="button" data-section-link="obras">
+        <span class="nav-icon" aria-hidden="true">▧</span>
+        <span>Obras de Arte</span>
+      </button>
+      <button class="nav-link" type="button" data-section-link="exposicoes">
+        <span class="nav-icon" aria-hidden="true">⌂</span>
+        <span>Exposições</span>
+      </button>
+      <button class="nav-link" type="button" data-section-link="seguros">
+        <span class="nav-icon" aria-hidden="true">▤</span>
+        <span>Relatório de Seguro</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span class="sidebar-footer-note">Um espaço para a arte.</span>
+      <button id="logout-button" class="nav-link nav-logout" type="button">
+        <span class="nav-icon" aria-hidden="true">↪</span>
+        <span>Sair / Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="dashboard-main">
+    <section id="section-inicio" class="dashboard-section" aria-labelledby="dashboard-heading">
+      <header class="page-heading dashboard-heading">
+        <p class="eyebrow">VISÃO GERAL</p>
+        <h1 id="dashboard-heading">Painel principal</h1>
+        <p class="muted">Bem-vindo ao espaço de gestão do ArtGallery.</p>
+      </header>
+
+      <section class="panel" aria-labelledby="account-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">SUA CONTA</p>
+            <h2 id="account-heading">Dados da conta</h2>
+            <p class="muted">Informações vinculadas ao seu acesso.</p>
+          </div>
+        </div>
+        <p id="dashboard-message" class="message" role="status" aria-live="polite">
+          Carregando seus dados…
+        </p>
+        <div id="account-cards" class="card-grid" aria-live="polite"></div>
+      </section>
+
+      <section class="dashboard-welcome panel" aria-label="Sobre o ArtGallery">
+        <p class="eyebrow">ARTGALLERY</p>
+        <h2>Arte, organizada em um só lugar.</h2>
+        <p class="muted">Acesse o menu para gerenciar artistas, obras, exposições e relatórios de seguro.</p>
+      </section>
+    </section>
+
+    <section id="section-artistas" class="dashboard-section" aria-labelledby="artists-heading" hidden>
+      <header class="page-heading dashboard-heading">
+        <p class="eyebrow">ACERVO</p>
+        <h1 id="artists-heading">Artistas</h1>
+        <p class="muted">Gerenciamento dos artistas representados pela galeria.</p>
+      </header>
+
+      <section class="panel artists-form-panel" aria-labelledby="artist-form-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">CADASTRO</p>
+            <h2 id="artist-form-heading">Novo artista</h2>
+            <p id="artist-id-reference" class="muted" hidden></p>
+          </div>
+        </div>
+        <form id="artist-form" class="artist-form">
+          <label for="artist-name">Nome</label>
+          <input id="artist-name" name="nome" type="text" autocomplete="name" required>
+
+          <label for="artist-cpf">CPF</label>
+          <input id="artist-cpf" name="cpf" type="text" inputmode="numeric"
+            autocomplete="off" placeholder="000.000.000-00" maxlength="14" required>
+
+          <label for="artist-nationality">Nacionalidade</label>
+          <input id="artist-nationality" name="nacionalidade" type="text" required>
+
+          <label for="artist-status">Status</label>
+          <input id="artist-status" name="status" type="text" value="Ativo" required>
+
+          <p id="artist-form-message" class="message" role="status" aria-live="polite" hidden></p>
+          <div class="artist-form-actions">
+            <button id="artist-submit-button" class="button button-primary" type="submit">
+              Cadastrar artista
+            </button>
+            <button id="artist-cancel-button" class="button button-secondary" type="button" hidden>
+              Cancelar edição
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel artists-list-panel" aria-labelledby="artists-list-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">ACERVO</p>
+            <h2 id="artists-list-heading">Artistas cadastrados</h2>
+          </div>
+        </div>
+        <p id="artists-list-message" class="message" role="status" aria-live="polite">
+          Carregando artistas…
+        </p>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Nome</th>
+                <th scope="col">CPF</th>
+                <th scope="col">Nacionalidade</th>
+                <th scope="col">Status</th>
+                <th scope="col">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="artists-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="section-obras" class="dashboard-section" aria-labelledby="artworks-heading" hidden>
+      <header class="page-heading dashboard-heading">
+        <p class="eyebrow">ACERVO</p>
+        <h1 id="artworks-heading">Obras de Arte</h1>
+        <p class="muted">Gerencie as obras de arte cadastradas pela galeria.</p>
+      </header>
+      <section class="panel catalog-form-panel" aria-labelledby="artwork-form-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">ACERVO</p>
+            <h2 id="artwork-form-heading">Nova obra</h2>
+            <p id="artwork-id-reference" class="muted" hidden></p>
+          </div>
+        </div>
+        <form id="artwork-form" class="catalog-form">
+          <label for="artwork-titulo">Título</label>
+          <input id="artwork-titulo" name="titulo" type="text" required>
+
+          <label for="artwork-tecnica">Técnica</label>
+          <input id="artwork-tecnica" name="tecnica" type="text" required>
+
+          <label for="artwork-anoCriacao">Ano de criação</label>
+          <input id="artwork-anoCriacao" name="anoCriacao" type="text"
+            inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4"
+            placeholder="AAAA" required>
+
+          <p id="artwork-form-message" class="message" role="status" aria-live="polite" hidden></p>
+          <div class="catalog-form-actions">
+            <button id="artwork-submit-button" class="button button-primary" type="submit">
+              Cadastrar obra
+            </button>
+            <button id="artwork-cancel-button" class="button button-secondary" type="button" hidden>
+              Cancelar edição
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel catalog-list-panel" aria-labelledby="artworks-list-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">ACERVO</p>
+            <h2 id="artworks-list-heading">Obras cadastradas</h2>
+          </div>
+        </div>
+        <p id="artworks-list-message" class="message" role="status" aria-live="polite">
+          Carregando obras…
+        </p>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Título</th>
+                <th scope="col">Técnica</th>
+                <th scope="col">Ano de Criação</th>
+                <th scope="col">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="artworks-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="section-exposicoes" class="dashboard-section" aria-labelledby="exhibitions-heading" hidden>
+      <header class="page-heading dashboard-heading">
+        <p class="eyebrow">PROGRAMAÇÃO</p>
+        <h1 id="exhibitions-heading">Exposições</h1>
+        <p class="muted">Cadastre e acompanhe as exposições da galeria.</p>
+      </header>
+      <section class="panel catalog-form-panel" aria-labelledby="exhibition-form-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">PROGRAMAÇÃO</p>
+            <h2 id="exhibition-form-heading">Nova exposição</h2>
+            <p id="exhibition-id-reference" class="muted" hidden></p>
+          </div>
+        </div>
+        <form id="exhibition-form" class="catalog-form">
+          <label for="exhibition-nome">Nome</label>
+          <input id="exhibition-nome" name="nome" type="text" required>
+
+          <label for="exhibition-local">Local</label>
+          <input id="exhibition-local" name="local" type="text" required>
+
+          <label for="exhibition-dataInicio">Data de início</label>
+          <input id="exhibition-dataInicio" name="dataInicio" type="date" required>
+
+          <p id="exhibition-form-message" class="message" role="status" aria-live="polite" hidden></p>
+          <div class="catalog-form-actions">
+            <button id="exhibition-submit-button" class="button button-primary" type="submit">
+              Cadastrar exposição
+            </button>
+            <button id="exhibition-cancel-button" class="button button-secondary" type="button" hidden>
+              Cancelar edição
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel catalog-list-panel" aria-labelledby="exhibitions-list-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">PROGRAMAÇÃO</p>
+            <h2 id="exhibitions-list-heading">Exposições cadastradas</h2>
+          </div>
+        </div>
+        <p id="exhibitions-list-message" class="message" role="status" aria-live="polite">
+          Carregando exposições…
+        </p>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Nome</th>
+                <th scope="col">Local</th>
+                <th scope="col">Data de Início</th>
+                <th scope="col">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="exhibitions-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="section-seguros" class="dashboard-section" aria-labelledby="insurance-heading" hidden>
+      <header class="page-heading dashboard-heading">
+        <p class="eyebrow">RELATÓRIOS</p>
+        <h1 id="insurance-heading">Relatório de Seguro</h1>
+        <p class="muted">Consulte os valores segurados das obras por exposição.</p>
+      </header>
+      <section class="panel module-panel">
+        <span class="module-icon" aria-hidden="true">▤</span>
+        <h2>Painel de apólices</h2>
+        <p class="muted">Este espaço está preparado para consolidar os valores de seguro das obras por exposição, conforme os dados da API.</p>
+      </section>
+    </section>
+  </main>
+</body>
+</html>
