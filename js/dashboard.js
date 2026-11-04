@@ -12,6 +12,13 @@ const artistFormMessage = document.querySelector("#artist-form-message");
 const artistCpfInput = document.querySelector("#artist-cpf");
 const artistSubmitButton = document.querySelector("#artist-submit-button");
 const artistCancelButton = document.querySelector("#artist-cancel-button");
+const insuranceReportForm = document.querySelector("#insurance-report-form");
+const insuranceExhibitionSelect = document.querySelector("#insurance-exhibition-select");
+const insuranceReportButton = document.querySelector("#insurance-report-button");
+const insuranceReportMessage = document.querySelector("#insurance-report-message");
+const insuranceTotalResult = document.querySelector("#insurance-total-result");
+const insuranceExhibitionName = document.querySelector("#insurance-exhibition-name");
+const insuranceTotalValue = document.querySelector("#insurance-total-value");
 
 let artists = [];
 let editingArtistId = null;
@@ -28,10 +35,12 @@ const artworkCatalog = setupEntityCrud({
   listMessageId: "artworks-list-message",
   emptyMessage: "Nenhuma obra cadastrada.",
   createLabel: "Cadastrar obra",
+  includeIdInUpdate: false,
   fields: [
     { key: "titulo", label: "Título", type: "text" },
     { key: "tecnica", label: "Técnica", type: "text" },
-    { key: "anoCriacao", label: "Ano de criação", type: "text" }
+    { key: "anoCriacao", label: "Ano de criação", type: "text" },
+    { key: "valorSeguro", label: "Valor do seguro", type: "number", format: formatCurrency }
   ]
 });
 const exhibitionCatalog = setupEntityCrud({
@@ -47,10 +56,12 @@ const exhibitionCatalog = setupEntityCrud({
   listMessageId: "exhibitions-list-message",
   emptyMessage: "Nenhuma exposição cadastrada.",
   createLabel: "Cadastrar exposição",
+  includeIdInUpdate: false,
   fields: [
     { key: "nome", label: "Nome", type: "text" },
     { key: "local", label: "Local", type: "text" },
-    { key: "dataInicio", label: "Data de início", type: "date" }
+    { key: "dataInicio", label: "Data de início", type: "date" },
+    { key: "dataFim", label: "Data de término", type: "date" }
   ]
 });
 
@@ -92,6 +103,8 @@ function showSection(sectionName) {
     artworkCatalog.load();
   } else if (sectionName === "exposicoes") {
     exhibitionCatalog.load();
+  } else if (sectionName === "seguros") {
+    loadInsuranceExhibitions();
   }
 }
 
@@ -105,6 +118,114 @@ sectionLinks.forEach((link) => {
 });
 
 showSection(window.location.hash.slice(1) || "inicio");
+
+insuranceReportForm.addEventListener("submit", loadInsuranceReport);
+insuranceExhibitionSelect.addEventListener("change", resetInsuranceTotal);
+
+function showInsuranceMessage(message, isError = false) {
+  insuranceReportMessage.textContent = message;
+  insuranceReportMessage.classList.toggle("message-error", isError);
+  insuranceReportMessage.setAttribute("role", isError ? "alert" : "status");
+  insuranceReportMessage.hidden = !message;
+}
+
+function resetInsuranceTotal() {
+  insuranceTotalResult.hidden = true;
+  insuranceExhibitionName.textContent = "";
+  insuranceTotalValue.textContent = "";
+}
+
+async function loadInsuranceExhibitions() {
+  insuranceExhibitionSelect.disabled = true;
+  insuranceReportButton.disabled = true;
+  insuranceExhibitionSelect.replaceChildren(new Option("Carregando exposições…", ""));
+  resetInsuranceTotal();
+  showInsuranceMessage("");
+
+  try {
+    const response = await apiRequest(API_CONFIG.exhibitionsPath);
+    const exhibitions = extractCatalogList(response);
+    insuranceExhibitionSelect.replaceChildren(new Option("Selecione uma exposição", ""));
+
+    exhibitions.forEach((exhibition) => {
+      if (exhibition.id === null || exhibition.id === undefined) {
+        return;
+      }
+
+      const option = new Option(
+        `${exhibition.nome || `Exposição ${exhibition.id}`}${exhibition.local ? ` — ${exhibition.local}` : ""}`,
+        String(exhibition.id)
+      );
+      insuranceExhibitionSelect.add(option);
+    });
+
+    if (insuranceExhibitionSelect.options.length === 1) {
+      showInsuranceMessage("Nenhuma exposição disponível para consulta.");
+      return;
+    }
+
+    insuranceExhibitionSelect.disabled = false;
+    insuranceReportButton.disabled = false;
+  } catch (error) {
+    insuranceExhibitionSelect.replaceChildren(new Option("Não foi possível carregar as exposições", ""));
+    showInsuranceMessage(error.message, true);
+  }
+}
+
+async function loadInsuranceReport(event) {
+  event.preventDefault();
+  resetInsuranceTotal();
+  showInsuranceMessage("");
+
+  const exhibitionId = insuranceExhibitionSelect.value;
+  if (!exhibitionId) {
+    showInsuranceMessage("Selecione uma exposição para consultar o relatório.", true);
+    insuranceExhibitionSelect.focus();
+    return;
+  }
+
+  const selectedExhibition = insuranceExhibitionSelect.selectedOptions[0].textContent;
+  insuranceExhibitionSelect.disabled = true;
+  insuranceReportButton.disabled = true;
+  insuranceReportButton.textContent = "Consultando…";
+  showInsuranceMessage("Consultando o valor total do seguro…");
+
+  try {
+    const path = API_CONFIG.insuranceReportPath.replace(
+      "{id}",
+      encodeURIComponent(exhibitionId)
+    );
+    const response = await apiRequest(path);
+    const total = extractInsuranceTotal(response);
+    insuranceExhibitionName.textContent = selectedExhibition;
+    insuranceTotalValue.textContent = new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    }).format(total);
+    insuranceTotalResult.hidden = false;
+    showInsuranceMessage("");
+  } catch (error) {
+    showInsuranceMessage(error.message, true);
+  } finally {
+    insuranceExhibitionSelect.disabled = insuranceExhibitionSelect.options.length <= 1;
+    insuranceReportButton.disabled = false;
+    insuranceReportButton.textContent = "Consultar relatório";
+  }
+}
+
+function extractInsuranceTotal(response) {
+  const total = typeof response === "number"
+    ? response
+    : response && typeof response === "object"
+      ? response.valorTotalSeguro
+      : null;
+
+  if (typeof total !== "number" || !Number.isFinite(total) || total < 0) {
+    throw new Error("A resposta do relatório deve conter valorTotalSeguro como número não negativo.");
+  }
+
+  return total;
+}
 
 artistCpfInput.addEventListener("input", () => {
   const digits = artistCpfInput.value.replace(/\D/g, "").slice(0, 11);
@@ -402,7 +523,9 @@ function setupEntityCrud(config) {
     records.forEach((record) => {
       const row = document.createElement("tr");
       appendTextCell(row, record.id);
-      config.fields.forEach(({ key }) => appendTextCell(row, record[key]));
+      config.fields.forEach(({ key, format }) => {
+        appendTextCell(row, format ? format(record[key]) : record[key]);
+      });
 
       const actionsCell = document.createElement("td");
       const actions = document.createElement("div");
@@ -481,10 +604,10 @@ function setupEntityCrud(config) {
     }
 
     const formData = new FormData(form);
-    const fields = Object.fromEntries(config.fields.map(({ key }) => [
-      key,
-      String(formData.get(key) || "").trim()
-    ]));
+    const fields = Object.fromEntries(config.fields.map(({ key, type }) => {
+      const value = String(formData.get(key) ?? "").trim();
+      return [key, type === "number" ? Number(value) : value];
+    }));
 
     let payload = fields;
     let path = config.path;
@@ -495,7 +618,7 @@ function setupEntityCrud(config) {
         showFormMessage(`O ID de ${config.name} não é um número válido para atualização.`, true);
         return;
       }
-      payload = { id: numericId, ...fields };
+      payload = config.includeIdInUpdate === false ? fields : { id: numericId, ...fields };
       path = `${config.path}/${encodeURIComponent(String(editingId))}`;
       method = "PUT";
     }
@@ -568,6 +691,22 @@ function createEntityActionButton(action, record, label, style) {
   button.textContent = label;
   button.setAttribute("aria-label", `${label} ${record.nome || record.titulo || "registro"}`);
   return button;
+}
+
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  }).format(amount);
 }
 
 /**

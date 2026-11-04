@@ -7,7 +7,9 @@ const API_CONFIG = {
   registerPath: "/usuarios",
   artistsPath: "/artistas",
   artworksPath: "/obras",
-  exhibitionsPath: "/exposicoes"
+  exhibitionsPath: "/exposicoes",
+  // Ajuste o modelo de caminho se a rota publicada no Swagger for diferente.
+  insuranceReportPath: "/exposicoes/{id}/relatorio-seguro"
 };
 
 /**

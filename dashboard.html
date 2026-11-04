@@ -174,6 +174,10 @@
             inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4"
             placeholder="AAAA" required>
 
+          <label for="artwork-valorSeguro">Valor do seguro (R$)</label>
+          <input id="artwork-valorSeguro" name="valorSeguro" type="number"
+            min="0" step="0.01" inputmode="decimal" required>
+
           <p id="artwork-form-message" class="message" role="status" aria-live="polite" hidden></p>
           <div class="catalog-form-actions">
             <button id="artwork-submit-button" class="button button-primary" type="submit">
@@ -204,6 +208,7 @@
                 <th scope="col">Título</th>
                 <th scope="col">Técnica</th>
                 <th scope="col">Ano de Criação</th>
+                <th scope="col">Valor do Seguro</th>
                 <th scope="col">Ações</th>
               </tr>
             </thead>
@@ -237,6 +242,9 @@
           <label for="exhibition-dataInicio">Data de início</label>
           <input id="exhibition-dataInicio" name="dataInicio" type="date" required>
 
+          <label for="exhibition-dataFim">Data de término</label>
+          <input id="exhibition-dataFim" name="dataFim" type="date" required>
+
           <p id="exhibition-form-message" class="message" role="status" aria-live="polite" hidden></p>
           <div class="catalog-form-actions">
             <button id="exhibition-submit-button" class="button button-primary" type="submit">
@@ -267,6 +275,7 @@
                 <th scope="col">Nome</th>
                 <th scope="col">Local</th>
                 <th scope="col">Data de Início</th>
+                <th scope="col">Data de Fim</th>
                 <th scope="col">Ações</th>
               </tr>
             </thead>
@@ -282,10 +291,30 @@
         <h1 id="insurance-heading">Relatório de Seguro</h1>
         <p class="muted">Consulte os valores segurados das obras por exposição.</p>
       </header>
-      <section class="panel module-panel">
-        <span class="module-icon" aria-hidden="true">▤</span>
-        <h2>Painel de apólices</h2>
-        <p class="muted">Este espaço está preparado para consolidar os valores de seguro das obras por exposição, conforme os dados da API.</p>
+      <section class="panel insurance-panel" aria-labelledby="insurance-report-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">RELATÓRIO</p>
+            <h2 id="insurance-report-heading">Valor segurado por exposição</h2>
+            <p class="muted">Selecione uma exposição para consultar o valor total do seguro das obras associadas.</p>
+          </div>
+        </div>
+        <form id="insurance-report-form" class="insurance-report-form">
+          <label for="insurance-exhibition-select">Exposição</label>
+          <select id="insurance-exhibition-select" name="exhibitionId" required>
+            <option value="">Carregando exposições…</option>
+          </select>
+          <button id="insurance-report-button" class="button button-primary" type="submit" disabled>
+            Consultar relatório
+          </button>
+        </form>
+
+        <p id="insurance-report-message" class="message" role="status" aria-live="polite" hidden></p>
+        <section id="insurance-total-result" class="insurance-total-result" aria-live="polite" hidden>
+          <p id="insurance-exhibition-name" class="insurance-exhibition-name"></p>
+          <p class="insurance-total-label">Valor Total do Seguro</p>
+          <p id="insurance-total-value" class="insurance-total-value"></p>
+        </section>
       </section>
     </section>
   </main>
