@@ -19,9 +19,16 @@ const insuranceReportMessage = document.querySelector("#insurance-report-message
 const insuranceTotalResult = document.querySelector("#insurance-total-result");
 const insuranceExhibitionName = document.querySelector("#insurance-exhibition-name");
 const insuranceTotalValue = document.querySelector("#insurance-total-value");
+const companySidebar = document.querySelector("#company-sidebar");
+const companySidebarToggle = document.querySelector("#toggle-sidebar-btn");
+const companySelector = document.querySelector("#company-selector");
+const currentCompany = document.querySelector("#current-company");
+const changeCompanyButton = document.querySelector("#change-company-btn");
+const companyMessage = document.querySelector("#company-message");
 
 let artists = [];
 let editingArtistId = null;
+let selectedCompanyId = localStorage.getItem("selectedCompanyId");
 const artworkCatalog = setupEntityCrud({
   name: "obra",
   path: API_CONFIG.artworksPath,
@@ -72,6 +79,11 @@ if (!localStorage.getItem("authToken")) {
   loadAccount();
 }
 
+const companiesReady = localStorage.getItem("authToken")
+  ? loadCompanies()
+  : Promise.resolve();
+restoreSidebarState();
+
 logoutButton.addEventListener("click", () => {
   localStorage.removeItem("authToken");
   window.location.href = "index.html";
@@ -108,16 +120,179 @@ function showSection(sectionName) {
   }
 }
 
+async function loadCompanies() {
+  companySelector.disabled = true;
+  changeCompanyButton.disabled = true;
+  companySelector.replaceChildren(new Option("Carregando empresas…", ""));
+  showCompanyMessage("Carregando empresas…");
+
+  try {
+    const response = await apiRequest(API_CONFIG.companiesPath);
+    const companies = extractCompanyList(response)
+      .map((company) => ({
+        id: company.id ?? company.empresaId ?? company.empresa_id,
+        name: company.nome || company.name || company.razaoSocial || company.nomeFantasia
+      }))
+      .filter((company) => company.id !== null && company.id !== undefined);
+
+    companySelector.replaceChildren(new Option("Selecione uma empresa", ""));
+    companies.forEach(({ id, name }) => {
+      companySelector.add(new Option(name || `Empresa ${id}`, String(id)));
+    });
+
+    if (companies.length === 0) {
+      selectedCompanyId = null;
+      localStorage.removeItem("selectedCompanyId");
+      localStorage.removeItem("selectedCompanyName");
+      atualizarEmpresaAtualNaTela(null);
+      showCompanyMessage("Nenhuma empresa disponível para esta conta.", true);
+      return;
+    }
+
+    const restoredCompany = restaurarEmpresaAtual(companies);
+    companySelector.value = String(restoredCompany.id);
+    companySelector.disabled = companies.length < 2;
+    updateChangeCompanyButton();
+    showCompanyMessage("");
+  } catch (error) {
+    companySelector.replaceChildren(new Option("Não foi possível carregar", ""));
+    currentCompany.textContent = localStorage.getItem("selectedCompanyName")
+      || "Nenhuma empresa selecionada";
+    showCompanyMessage(error.message, true);
+  }
+}
+
+function extractCompanyList(response) {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (response && typeof response === "object") {
+    for (const key of ["content", "data", "empresas", "companies"]) {
+      if (response[key] !== undefined && response[key] !== null) {
+        return extractCompanyList(response[key]);
+      }
+    }
+  }
+
+  throw new Error("A API não retornou uma lista de empresas em formato reconhecido.");
+}
+
+function restaurarEmpresaAtual(companies) {
+  const company = companies.find(({ id }) => String(id) === selectedCompanyId) || companies[0];
+  salvarEmpresaAtual(company);
+  return company;
+}
+
+function salvarEmpresaAtual(company) {
+  selectedCompanyId = String(company.id);
+  localStorage.setItem("selectedCompanyId", selectedCompanyId);
+  localStorage.setItem("selectedCompanyName", company.name || `Empresa ${company.id}`);
+  atualizarEmpresaAtualNaTela(company);
+}
+
+function atualizarEmpresaAtualNaTela(company) {
+  currentCompany.textContent = company
+    ? company.name || `Empresa ${company.id}`
+    : "Nenhuma empresa selecionada";
+}
+
+async function selecionarEmpresa() {
+  const company = Array.from(companySelector.options)
+    .filter((option) => option.value)
+    .map((option) => ({ id: option.value, name: option.textContent }))
+    .find(({ id }) => id === companySelector.value);
+
+  if (!company) {
+    showCompanyMessage("Selecione uma empresa válida para continuar.", true);
+    return;
+  }
+
+  if (String(company.id) === selectedCompanyId) {
+    updateChangeCompanyButton();
+    return;
+  }
+
+  salvarEmpresaAtual(company);
+  updateChangeCompanyButton();
+  showCompanyMessage("Carregando os dados da empresa…");
+  const results = await Promise.all([
+    loadArtists(),
+    artworkCatalog.load(),
+    exhibitionCatalog.load(),
+    loadInsuranceExhibitions()
+  ]);
+  const allLoaded = results.every((result) => result === true);
+  showCompanyMessage(
+    allLoaded
+      ? `Dados de ${company.name} carregados.`
+      : "Empresa selecionada, mas alguns dados não puderam ser carregados. Confira as mensagens dos módulos.",
+    !allLoaded
+  );
+}
+
+function updateChangeCompanyButton() {
+  changeCompanyButton.disabled = !companySelector.value
+    || companySelector.value === selectedCompanyId;
+}
+
+function showCompanyMessage(message, isError = false) {
+  companyMessage.textContent = message;
+  companyMessage.classList.toggle("message-error", isError);
+  companyMessage.hidden = !message;
+}
+
+function companyScopedPath(path) {
+  if (!selectedCompanyId) {
+    return path;
+  }
+
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}empresa_id=${encodeURIComponent(selectedCompanyId)}`;
+}
+
+function toggleSidebar() {
+  const collapsed = !companySidebar.classList.contains("collapsed");
+  setSidebarCollapsed(collapsed);
+  localStorage.setItem("sidebarCollapsed", String(collapsed));
+}
+
+function restoreSidebarState() {
+  setSidebarCollapsed(localStorage.getItem("sidebarCollapsed") === "true");
+}
+
+function setSidebarCollapsed(collapsed) {
+  companySidebar.classList.toggle("collapsed", collapsed);
+  document.body.classList.toggle("company-sidebar-collapsed", collapsed);
+  companySidebarToggle.setAttribute("aria-expanded", String(!collapsed));
+  companySidebarToggle.setAttribute(
+    "aria-label",
+    collapsed ? "Expandir menu de empresas" : "Recolher menu de empresas"
+  );
+  companySidebarToggle.title = collapsed
+    ? "Expandir menu de empresas"
+    : "Recolher menu de empresas";
+  companySidebarToggle.querySelector("path").setAttribute(
+    "d",
+    collapsed ? "m15 18-6-6 6-6" : "m9 18 6-6-6-6"
+  );
+}
+
+companySelector.addEventListener("change", updateChangeCompanyButton);
+changeCompanyButton.addEventListener("click", selecionarEmpresa);
+companySidebarToggle.addEventListener("click", toggleSidebar);
+
 sectionLinks.forEach((link) => {
-  link.addEventListener("click", (event) => {
+  link.addEventListener("click", async (event) => {
     event.preventDefault();
+    await companiesReady;
     const sectionName = link.dataset.sectionLink;
     showSection(sectionName);
     window.history.replaceState(null, "", `#${sectionName}`);
   });
 });
 
-showSection(window.location.hash.slice(1) || "inicio");
+companiesReady.then(() => showSection(window.location.hash.slice(1) || "inicio"));
 
 insuranceReportForm.addEventListener("submit", loadInsuranceReport);
 insuranceExhibitionSelect.addEventListener("change", resetInsuranceTotal);
@@ -143,7 +318,7 @@ async function loadInsuranceExhibitions() {
   showInsuranceMessage("");
 
   try {
-    const response = await apiRequest(API_CONFIG.exhibitionsPath);
+    const response = await apiRequest(companyScopedPath(API_CONFIG.exhibitionsPath));
     const exhibitions = extractCatalogList(response);
     insuranceExhibitionSelect.replaceChildren(new Option("Selecione uma exposição", ""));
 
@@ -161,14 +336,16 @@ async function loadInsuranceExhibitions() {
 
     if (insuranceExhibitionSelect.options.length === 1) {
       showInsuranceMessage("Nenhuma exposição disponível para consulta.");
-      return;
+      return true;
     }
 
     insuranceExhibitionSelect.disabled = false;
     insuranceReportButton.disabled = false;
+    return true;
   } catch (error) {
     insuranceExhibitionSelect.replaceChildren(new Option("Não foi possível carregar as exposições", ""));
     showInsuranceMessage(error.message, true);
+    return false;
   }
 }
 
@@ -195,7 +372,7 @@ async function loadInsuranceReport(event) {
       "{id}",
       encodeURIComponent(exhibitionId)
     );
-    const response = await apiRequest(path);
+    const response = await apiRequest(companyScopedPath(path));
     const total = extractInsuranceTotal(response);
     insuranceExhibitionName.textContent = selectedExhibition;
     insuranceTotalValue.textContent = new Intl.NumberFormat("pt-BR", {
@@ -254,6 +431,11 @@ artistsTableBody.addEventListener("click", async (event) => {
 
   if (button.dataset.action === "delete") {
     await deleteArtist(artist);
+    return;
+  }
+
+  if (button.dataset.action === "toggle-status") {
+    await toggleArtistStatus(artist, button);
   }
 });
 
@@ -295,7 +477,7 @@ function extractArtistList(response) {
 async function loadArtists() {
   showArtistsMessage("Carregando artistas…");
   try {
-    const response = await apiRequest(API_CONFIG.artistsPath);
+    const response = await apiRequest(companyScopedPath(API_CONFIG.artistsPath));
     artists = extractArtistList(response);
     renderArtists();
     return true;
@@ -329,13 +511,25 @@ function renderArtists() {
     appendTextCell(row, artist.nome);
     appendTextCell(row, artist.cpf);
     appendTextCell(row, artist.nacionalidade);
-    appendTextCell(row, artist.status);
+    const isActive = isArtistActive(artist);
+    const statusCell = document.createElement("td");
+    const statusIndicator = document.createElement("span");
+    statusIndicator.className = `status ${isActive ? "status-active" : "status-inactive"}`;
+    statusIndicator.textContent = isActive ? "● Ativo" : "● Inativo";
+    statusCell.append(statusIndicator);
+    row.append(statusCell);
 
     const actionsCell = document.createElement("td");
     const actions = document.createElement("div");
     actions.className = "table-actions";
     if (artist.id !== null && artist.id !== undefined) {
       actions.append(
+        createArtistActionButton(
+          "toggle-status",
+          artist,
+          isActive ? "Inativar" : "Ativar",
+          `status-toggle ${isActive ? "active" : "inactive"}`
+        ),
         createArtistActionButton("edit", artist, "Editar", "button-secondary"),
         createArtistActionButton("delete", artist, "Excluir", "button-danger")
       );
@@ -363,34 +557,99 @@ function createArtistActionButton(action, artist, label, style) {
   button.className = `button button-small ${style}`;
   button.textContent = label;
   button.setAttribute("aria-label", `${label} ${artist.nome || "artista"}`);
+  if (action === "toggle-status") {
+    button.title = `${label} ${artist.nome || "artista"}`;
+  }
   return button;
+}
+
+function isArtistActive(artist) {
+  return String(artist.status || "").trim().toUpperCase() === "ATIVO";
+}
+
+async function toggleArtistStatus(artist, button) {
+  const wasActive = isArtistActive(artist);
+  const action = wasActive ? "inativar" : "ativar";
+  button.disabled = true;
+  showArtistsMessage(`Atualizando status de ${artist.nome || "artista"}…`);
+
+  try {
+    const path = `${API_CONFIG.artistsPath}/${encodeURIComponent(String(artist.id))}/${action}`;
+    await apiRequest(companyScopedPath(path), { method: "PATCH" });
+    const refreshed = await loadArtists();
+    if (refreshed) {
+      showArtistsMessage(
+        `Artista ${artist.nome || ""} ${wasActive ? "inativado" : "ativado"} com sucesso.`
+      );
+    } else {
+      showArtistsMessage(
+        "O status foi atualizado, mas não foi possível recarregar a lista de artistas.",
+        true
+      );
+    }
+  } catch (error) {
+    showArtistsMessage(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function editArtist(artist) {
   editingArtistId = artist.id;
-  artistForm.elements.namedItem("nome").value = artist.nome || "";
-  const cpfDigits = String(artist.cpf || "").replace(/\D/g, "");
-  artistCpfInput.value = cpfDigits.length === 11 ? formatCpf(cpfDigits) : String(artist.cpf || "");
-  artistForm.elements.namedItem("nacionalidade").value = artist.nacionalidade || "";
-  artistForm.elements.namedItem("status").value = artist.status || "";
+
+  artistForm.elements.namedItem("nome").value =
+    artist.nome || "";
+
+  const cpfDigits = String(
+    artist.cpf || ""
+  ).replace(/\D/g, "");
+
+  artistCpfInput.value =
+    cpfDigits.length === 11
+      ? formatCpf(cpfDigits)
+      : String(artist.cpf || "");
+
+  artistForm.elements.namedItem("nacionalidade").value =
+    artist.nacionalidade || "";
+
   artistFormHeading.textContent = "Editar artista";
-  artistIdReference.textContent = `ID do artista: ${artist.id}`;
+
+  artistIdReference.textContent =
+    `ID do artista: ${artist.id}`;
+
   artistIdReference.hidden = false;
-  artistSubmitButton.textContent = "Salvar alterações";
+
+  artistSubmitButton.textContent =
+    "Salvar alterações";
+
   artistCancelButton.hidden = false;
+
   showArtistFormMessage("");
-  artistForm.elements.namedItem("nome").focus();
+
+  artistForm.elements
+    .namedItem("nome")
+    .focus();
 }
+
+
 
 function resetArtistForm() {
   editingArtistId = null;
+
   artistForm.reset();
-  artistForm.elements.namedItem("status").value = "Ativo";
-  artistFormHeading.textContent = "Novo artista";
+
+  artistFormHeading.textContent =
+    "Novo artista";
+
   artistIdReference.textContent = "";
+
   artistIdReference.hidden = true;
-  artistSubmitButton.textContent = "Cadastrar artista";
+
+  artistSubmitButton.textContent =
+    "Cadastrar artista";
+
   artistCancelButton.hidden = true;
+
   showArtistFormMessage("");
 }
 
@@ -411,11 +670,12 @@ async function saveArtist(event) {
   }
 
   const artistFields = {
-    nome: String(formData.get("nome") || "").trim(),
-    cpf: formatCpf(cpfDigits),
-    nacionalidade: String(formData.get("nacionalidade") || "").trim(),
-    status: String(formData.get("status") || "").trim()
-  };
+  nome: String(formData.get("nome") || "").trim(),
+  cpf: formatCpf(cpfDigits),
+  nacionalidade: String(formData.get("nacionalidade") || "").trim()
+};
+
+
   let artist = artistFields;
   let path = API_CONFIG.artistsPath;
   let method = "POST";
@@ -548,7 +808,7 @@ function setupEntityCrud(config) {
   const load = async () => {
     showListMessage(`Carregando ${config.name === "obra" ? "obras" : "exposições"}…`);
     try {
-      const response = await apiRequest(config.path);
+      const response = await apiRequest(companyScopedPath(config.path));
       records = extractCatalogList(response);
       render();
       return true;

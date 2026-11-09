@@ -5,6 +5,7 @@ const API_CONFIG = {
   baseUrl: "http://localhost:8080",
   loginPath: "/login",
   registerPath: "/usuarios",
+  companiesPath: "/empresas",
   artistsPath: "/artistas",
   artworksPath: "/obras",
   exhibitionsPath: "/exposicoes",

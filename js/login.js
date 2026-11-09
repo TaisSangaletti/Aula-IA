@@ -126,7 +126,7 @@ loginForm.addEventListener("submit", async (event) => {
   const password = String(formData.get("password") || "");
 
   if (!username || !password.trim()) {
-    loginMessage.textContent = "Preencha o e-mail ou usuário e a senha para continuar.";
+    loginMessage.textContent = "Preencha o CPF e a senha para continuar.";
     loginMessage.classList.add("message-error");
     loginMessage.hidden = false;
     return;

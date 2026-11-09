@@ -702,7 +702,7 @@ tbody tr:last-child td {
   border-bottom: 0;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 960px) {
   .sidebar {
     position: sticky;
     inset: 0 0 auto;

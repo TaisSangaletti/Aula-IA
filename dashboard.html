@@ -7,6 +7,7 @@
   <meta name="description" content="Painel administrativo do ArtGallery.">
   <title>Painel | ArtGallery</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
   <script src="js/api.js" defer></script>
   <script src="js/dashboard.js" defer></script>
 </head>
@@ -104,9 +105,6 @@
 
           <label for="artist-nationality">Nacionalidade</label>
           <input id="artist-nationality" name="nacionalidade" type="text" required>
-
-          <label for="artist-status">Status</label>
-          <input id="artist-status" name="status" type="text" value="Ativo" required>
 
           <p id="artist-form-message" class="message" role="status" aria-live="polite" hidden></p>
           <div class="artist-form-actions">
@@ -318,5 +316,31 @@
       </section>
     </section>
   </main>
+
+  <aside id="company-sidebar" aria-label="Seleção de empresa">
+    <button id="toggle-sidebar-btn" class="company-sidebar-toggle" type="button"
+      aria-label="Recolher menu de empresas" aria-expanded="true"
+      title="Recolher menu de empresas">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="m9 18 6-6-6-6"></path>
+      </svg>
+    </button>
+
+    <div class="company-sidebar-content">
+      <p class="eyebrow">EMPRESA</p>
+      <h2>Empresa atual</h2>
+      <p id="current-company" class="current-company-name">Nenhuma empresa selecionada</p>
+
+      <label for="company-selector">Selecionar empresa</label>
+      <select id="company-selector" name="company">
+        <option value="">Carregando empresas…</option>
+      </select>
+
+      <button id="change-company-btn" class="button button-primary" type="button" disabled>
+        Trocar empresa
+      </button>
+      <p id="company-message" class="company-message" role="status" aria-live="polite" hidden></p>
+    </div>
+  </aside>
 </body>
 </html>
