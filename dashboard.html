@@ -6,8 +6,16 @@
   <meta name="theme-color" content="#17283d">
   <meta name="description" content="Painel administrativo do ArtGallery.">
   <title>Painel | ArtGallery</title>
+  <script>
+    (() => {
+      const savedTheme = localStorage.getItem("theme");
+      const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme = savedTheme || (systemPrefersDark ? "dark" : "light");
+    })();
+  </script>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/dashboard.css">
+  <script type="module" src="js/theme-toggle.js"></script>
   <script src="js/api.js" defer></script>
   <script src="js/dashboard.js" defer></script>
 </head>
@@ -40,6 +48,17 @@
         <span class="nav-icon" aria-hidden="true">▤</span>
         <span>Relatório de Seguro</span>
       </button>
+      <button class="nav-link theme-toggle" type="button" data-theme-toggle
+        aria-label="Ativar modo escuro" aria-pressed="false">
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
+        </svg>
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"></path>
+        </svg>
+        <span data-theme-label>Modo escuro</span>
+      </button>
     </nav>
 
     <div class="sidebar-footer">
@@ -56,7 +75,7 @@
       <header class="page-heading dashboard-heading">
         <p class="eyebrow">VISÃO GERAL</p>
         <h1 id="dashboard-heading">Painel principal</h1>
-        <p class="muted">Bem-vindo ao espaço de gestão do ArtGallery.</p>
+        <p id="dashboard-greeting" class="muted">Bem-vindo ao espaço de gestão do ArtGallery.</p>
       </header>
 
       <section class="panel" aria-labelledby="account-heading">
@@ -68,9 +87,50 @@
           </div>
         </div>
         <p id="dashboard-message" class="message" role="status" aria-live="polite">
-          Carregando seus dados…
+          Preparando os dados da conta…
         </p>
         <div id="account-cards" class="card-grid" aria-live="polite"></div>
+      </section>
+
+      <section class="panel overview-panel" aria-labelledby="overview-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">ACERVO</p>
+            <h2 id="overview-heading">Visão geral da galeria</h2>
+            <p class="muted">Indicadores da empresa selecionada.</p>
+          </div>
+        </div>
+        <p id="overview-message" class="message" role="status" aria-live="polite">
+          Carregando indicadores…
+        </p>
+        <div class="card-grid overview-grid" aria-live="polite">
+          <article class="data-card overview-card">
+            <h3>Obras cadastradas</h3>
+            <p id="overview-artwork-count" class="overview-metric-value">Carregando…</p>
+            <p class="overview-card-note">Obras registradas no acervo.</p>
+          </article>
+          <article class="data-card overview-card">
+            <h3>Exposições ativas</h3>
+            <p id="overview-active-exhibition-count" class="overview-metric-value">Carregando…</p>
+            <p class="overview-card-note">Exposições em andamento hoje.</p>
+          </article>
+          <article class="data-card overview-card">
+            <h3>Valor total do seguro</h3>
+            <p id="overview-insurance-total" class="overview-metric-value">Carregando…</p>
+            <p class="overview-card-note">Soma dos valores de seguro das obras.</p>
+          </article>
+        </div>
+        <nav class="overview-quick-links" aria-label="Atalhos rápidos">
+          <button class="button button-outline" type="button" data-section-link="obras">
+            Gerenciar obras
+          </button>
+          <button class="button button-outline" type="button" data-section-link="exposicoes">
+            Ver exposições
+          </button>
+          <button class="button button-outline" type="button" data-section-link="seguros">
+            Abrir relatório de seguro
+          </button>
+        </nav>
       </section>
 
       <section class="dashboard-welcome panel" aria-label="Sobre o ArtGallery">
@@ -287,32 +347,45 @@
       <header class="page-heading dashboard-heading">
         <p class="eyebrow">RELATÓRIOS</p>
         <h1 id="insurance-heading">Relatório de Seguro</h1>
-        <p class="muted">Consulte os valores segurados das obras por exposição.</p>
+        <p class="muted">Consulte o valor individual do seguro de cada obra e o total do acervo.</p>
       </header>
       <section class="panel insurance-panel" aria-labelledby="insurance-report-heading">
         <div class="panel-heading">
           <div>
             <p class="eyebrow">RELATÓRIO</p>
-            <h2 id="insurance-report-heading">Valor segurado por exposição</h2>
-            <p class="muted">Selecione uma exposição para consultar o valor total do seguro das obras associadas.</p>
+            <h2 id="insurance-report-heading">Seguro das obras cadastradas</h2>
+            <p class="muted">Os valores são consultados diretamente no cadastro de obras da empresa selecionada.</p>
           </div>
         </div>
         <form id="insurance-report-form" class="insurance-report-form">
-          <label for="insurance-exhibition-select">Exposição</label>
-          <select id="insurance-exhibition-select" name="exhibitionId" required>
-            <option value="">Carregando exposições…</option>
-          </select>
-          <button id="insurance-report-button" class="button button-primary" type="submit" disabled>
-            Consultar relatório
+          <button id="insurance-report-button" class="button button-primary" type="submit">
+            Atualizar relatório
           </button>
         </form>
 
-        <p id="insurance-report-message" class="message" role="status" aria-live="polite" hidden></p>
+        <p id="insurance-report-message" class="message" role="status" aria-live="polite">
+          Carregando valores de seguro…
+        </p>
         <section id="insurance-total-result" class="insurance-total-result" aria-live="polite" hidden>
-          <p id="insurance-exhibition-name" class="insurance-exhibition-name"></p>
-          <p class="insurance-total-label">Valor Total do Seguro</p>
+          <p class="insurance-total-label">Obras incluídas no relatório</p>
+          <p id="insurance-artwork-count" class="insurance-artwork-count"></p>
+          <p class="insurance-total-label">Valor total do seguro</p>
           <p id="insurance-total-value" class="insurance-total-value"></p>
         </section>
+        <div class="table-wrapper insurance-table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Obra</th>
+                <th scope="col">Técnica</th>
+                <th scope="col">Ano de criação</th>
+                <th scope="col">Valor do seguro</th>
+              </tr>
+            </thead>
+            <tbody id="insurance-table-body"></tbody>
+          </table>
+        </div>
       </section>
     </section>
   </main>

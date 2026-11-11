@@ -19,9 +19,10 @@
   overflow: hidden;
   padding: 1.25rem;
   border-radius: 1rem 0 0 1rem;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: -8px 0 30px rgb(23 40 61 / 10%);
-  transition: width 240ms ease, padding 240ms ease, border-radius 240ms ease;
+  transition: width 240ms ease, padding 240ms ease, border-radius 240ms ease,
+    background-color 200ms ease, color 200ms ease, border-color 200ms ease;
 }
 
 .company-sidebar-toggle {
@@ -33,15 +34,15 @@
   place-items: center;
   border: 1px solid var(--color-border);
   border-radius: 0.75rem;
-  background: #fff;
-  color: #17283d;
+  background: var(--color-surface);
+  color: var(--color-text);
   cursor: pointer;
   transition: background-color 140ms ease, border-color 140ms ease;
 }
 
 .company-sidebar-toggle:hover {
   border-color: #d3b779;
-  background: #fbf8f1;
+  background: var(--color-accent-soft);
 }
 
 .company-sidebar-toggle:focus-visible {
@@ -79,7 +80,7 @@
 .current-company-name {
   margin: 0;
   overflow-wrap: anywhere;
-  color: #17283d;
+  color: var(--color-text);
   font-size: 1.05rem;
   font-weight: 750;
 }
@@ -96,8 +97,9 @@
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: 0.7rem;
-  background: #fff;
+  background: var(--color-input-bg);
   color: var(--color-text);
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
 }
 
 .company-sidebar-content select:focus-visible {

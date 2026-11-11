@@ -1,5 +1,10 @@
 const dashboardMessage = document.querySelector("#dashboard-message");
 const accountCards = document.querySelector("#account-cards");
+const dashboardGreeting = document.querySelector("#dashboard-greeting");
+const overviewMessage = document.querySelector("#overview-message");
+const overviewArtworkCount = document.querySelector("#overview-artwork-count");
+const overviewActiveExhibitionCount = document.querySelector("#overview-active-exhibition-count");
+const overviewInsuranceTotal = document.querySelector("#overview-insurance-total");
 const logoutButton = document.querySelector("#logout-button");
 const sectionLinks = document.querySelectorAll("[data-section-link]");
 const dashboardSections = document.querySelectorAll(".dashboard-section");
@@ -13,12 +18,12 @@ const artistCpfInput = document.querySelector("#artist-cpf");
 const artistSubmitButton = document.querySelector("#artist-submit-button");
 const artistCancelButton = document.querySelector("#artist-cancel-button");
 const insuranceReportForm = document.querySelector("#insurance-report-form");
-const insuranceExhibitionSelect = document.querySelector("#insurance-exhibition-select");
 const insuranceReportButton = document.querySelector("#insurance-report-button");
 const insuranceReportMessage = document.querySelector("#insurance-report-message");
 const insuranceTotalResult = document.querySelector("#insurance-total-result");
-const insuranceExhibitionName = document.querySelector("#insurance-exhibition-name");
+const insuranceArtworkCount = document.querySelector("#insurance-artwork-count");
 const insuranceTotalValue = document.querySelector("#insurance-total-value");
+const insuranceTableBody = document.querySelector("#insurance-table-body");
 const companySidebar = document.querySelector("#company-sidebar");
 const companySidebarToggle = document.querySelector("#toggle-sidebar-btn");
 const companySelector = document.querySelector("#company-selector");
@@ -116,7 +121,9 @@ function showSection(sectionName) {
   } else if (sectionName === "exposicoes") {
     exhibitionCatalog.load();
   } else if (sectionName === "seguros") {
-    loadInsuranceExhibitions();
+    loadInsuranceReport();
+  } else if (sectionName === "inicio") {
+    loadOverview();
   }
 }
 
@@ -220,7 +227,8 @@ async function selecionarEmpresa() {
     loadArtists(),
     artworkCatalog.load(),
     exhibitionCatalog.load(),
-    loadInsuranceExhibitions()
+    loadOverview(),
+    loadInsuranceReport()
   ]);
   const allLoaded = results.every((result) => result === true);
   showCompanyMessage(
@@ -295,7 +303,6 @@ sectionLinks.forEach((link) => {
 companiesReady.then(() => showSection(window.location.hash.slice(1) || "inicio"));
 
 insuranceReportForm.addEventListener("submit", loadInsuranceReport);
-insuranceExhibitionSelect.addEventListener("change", resetInsuranceTotal);
 
 function showInsuranceMessage(message, isError = false) {
   insuranceReportMessage.textContent = message;
@@ -304,104 +311,90 @@ function showInsuranceMessage(message, isError = false) {
   insuranceReportMessage.hidden = !message;
 }
 
-function resetInsuranceTotal() {
-  insuranceTotalResult.hidden = true;
-  insuranceExhibitionName.textContent = "";
-  insuranceTotalValue.textContent = "";
-}
+async function loadInsuranceReport(event) {
+  if (event) {
+    event.preventDefault();
+  }
 
-async function loadInsuranceExhibitions() {
-  insuranceExhibitionSelect.disabled = true;
   insuranceReportButton.disabled = true;
-  insuranceExhibitionSelect.replaceChildren(new Option("Carregando exposições…", ""));
-  resetInsuranceTotal();
-  showInsuranceMessage("");
+  insuranceReportButton.textContent = "Atualizando…";
+  insuranceTotalResult.hidden = true;
+  insuranceArtworkCount.textContent = "";
+  insuranceTotalValue.textContent = "";
+  insuranceTableBody.replaceChildren();
+  showInsuranceMessage("Carregando valores de seguro…");
 
   try {
-    const response = await apiRequest(companyScopedPath(API_CONFIG.exhibitionsPath));
-    const exhibitions = extractCatalogList(response);
-    insuranceExhibitionSelect.replaceChildren(new Option("Selecione uma exposição", ""));
-
-    exhibitions.forEach((exhibition) => {
-      if (exhibition.id === null || exhibition.id === undefined) {
-        return;
+    const response = await apiRequest(companyScopedPath(API_CONFIG.artworksPath));
+    const artworks = extractCatalogList(response);
+    const reportItems = artworks.map((artwork) => {
+      if (!artwork || typeof artwork !== "object" || Array.isArray(artwork)) {
+        throw new Error("A API retornou uma obra em formato inválido.");
       }
 
-      const option = new Option(
-        `${exhibition.nome || `Exposição ${exhibition.id}`}${exhibition.local ? ` — ${exhibition.local}` : ""}`,
-        String(exhibition.id)
-      );
-      insuranceExhibitionSelect.add(option);
+      const rawInsuranceValue = artwork.valorSeguro;
+      const insuranceValue = Number(rawInsuranceValue);
+      if (rawInsuranceValue === null || rawInsuranceValue === undefined
+        || rawInsuranceValue === "" || !Number.isFinite(insuranceValue)
+        || insuranceValue < 0) {
+        const artworkName = artwork.titulo || artwork.id || "sem identificação";
+        throw new Error(`O valor do seguro da obra "${artworkName}" é inválido.`);
+      }
+
+      return { artwork, insuranceValue };
     });
 
-    if (insuranceExhibitionSelect.options.length === 1) {
-      showInsuranceMessage("Nenhuma exposição disponível para consulta.");
-      return true;
-    }
-
-    insuranceExhibitionSelect.disabled = false;
-    insuranceReportButton.disabled = false;
+    renderInsuranceReport(reportItems);
+    insuranceTotalResult.hidden = false;
+    showInsuranceMessage(reportItems.length === 0
+      ? "Nenhuma obra cadastrada para esta empresa."
+      : `${reportItems.length} obra${reportItems.length === 1 ? "" : "s"} incluída${reportItems.length === 1 ? "" : "s"} no relatório.`);
     return true;
   } catch (error) {
-    insuranceExhibitionSelect.replaceChildren(new Option("Não foi possível carregar as exposições", ""));
     showInsuranceMessage(error.message, true);
     return false;
-  }
-}
-
-async function loadInsuranceReport(event) {
-  event.preventDefault();
-  resetInsuranceTotal();
-  showInsuranceMessage("");
-
-  const exhibitionId = insuranceExhibitionSelect.value;
-  if (!exhibitionId) {
-    showInsuranceMessage("Selecione uma exposição para consultar o relatório.", true);
-    insuranceExhibitionSelect.focus();
-    return;
-  }
-
-  const selectedExhibition = insuranceExhibitionSelect.selectedOptions[0].textContent;
-  insuranceExhibitionSelect.disabled = true;
-  insuranceReportButton.disabled = true;
-  insuranceReportButton.textContent = "Consultando…";
-  showInsuranceMessage("Consultando o valor total do seguro…");
-
-  try {
-    const path = API_CONFIG.insuranceReportPath.replace(
-      "{id}",
-      encodeURIComponent(exhibitionId)
-    );
-    const response = await apiRequest(companyScopedPath(path));
-    const total = extractInsuranceTotal(response);
-    insuranceExhibitionName.textContent = selectedExhibition;
-    insuranceTotalValue.textContent = new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL"
-    }).format(total);
-    insuranceTotalResult.hidden = false;
-    showInsuranceMessage("");
-  } catch (error) {
-    showInsuranceMessage(error.message, true);
   } finally {
-    insuranceExhibitionSelect.disabled = insuranceExhibitionSelect.options.length <= 1;
     insuranceReportButton.disabled = false;
-    insuranceReportButton.textContent = "Consultar relatório";
+    insuranceReportButton.textContent = "Atualizar relatório";
   }
 }
 
-function extractInsuranceTotal(response) {
-  const total = typeof response === "number"
-    ? response
-    : response && typeof response === "object"
-      ? response.valorTotalSeguro
-      : null;
+function renderInsuranceReport(reportItems) {
+  const fragment = document.createDocumentFragment();
+  let total = 0;
 
-  if (typeof total !== "number" || !Number.isFinite(total) || total < 0) {
-    throw new Error("A resposta do relatório deve conter valorTotalSeguro como número não negativo.");
+  reportItems.forEach(({ artwork, insuranceValue }) => {
+    total += insuranceValue;
+    const row = document.createElement("tr");
+    const values = [
+      artwork.id ?? "—",
+      artwork.titulo || "—",
+      artwork.tecnica || "—",
+      artwork.anoCriacao ?? "—",
+      formatCurrency(insuranceValue)
+    ];
+
+    values.forEach((value) => {
+      const cell = document.createElement("td");
+      cell.textContent = String(value);
+      row.append(cell);
+    });
+    fragment.append(row);
+  });
+
+  if (reportItems.length === 0) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.className = "table-empty-cell";
+    cell.colSpan = 5;
+    cell.textContent = "Nenhuma obra cadastrada.";
+    row.append(cell);
+    fragment.append(row);
   }
 
-  return total;
+  insuranceTableBody.replaceChildren(fragment);
+  insuranceArtworkCount.textContent = String(reportItems.length);
+  insuranceTotalValue.textContent = formatCurrency(total);
 }
 
 artistCpfInput.addEventListener("input", () => {
@@ -969,67 +962,255 @@ function formatCurrency(value) {
   }).format(amount);
 }
 
-/**
- * Converte os campos da resposta em cartões sem inserir HTML recebido da API.
- * Usar textContent evita interpretar dados externos como marcação HTML.
- */
-function renderAccount(data) {
-  // Algumas APIs envolvem o objeto principal em uma propriedade "data".
-  const account = data && typeof data === "object" && !Array.isArray(data) && data.data
-    ? data.data
-    : data;
+function getAccountSources(value) {
+  const sources = [];
+  const pending = [value];
+  const nestedKeys = ["data", "usuario", "user", "account", "principal", "userDetails", "perfil"];
 
-  if (!account || typeof account !== "object" || Array.isArray(account)) {
-    throw new Error("A API não retornou um objeto de conta em formato reconhecido.");
+  while (pending.length > 0) {
+    const current = pending.shift();
+    if (!current || typeof current !== "object" || Array.isArray(current) || sources.includes(current)) {
+      continue;
+    }
+
+    sources.push(current);
+    nestedKeys.forEach((key) => {
+      if (current[key] && typeof current[key] === "object" && !Array.isArray(current[key])) {
+        pending.push(current[key]);
+      }
+    });
   }
 
-  const entries = Object.entries(account);
-  if (entries.length === 0) {
-    throw new Error("A API retornou a conta sem campos para exibir.");
-  }
+  return sources;
+}
 
+function firstAccountValue(sources, keys) {
+  for (const source of sources) {
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === "string" && value.trim()) {
+        return value.trim();
+      }
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return String(value);
+      }
+    }
+  }
+  return "";
+}
+
+function firstAccountProperty(sources, keys) {
+  for (const source of sources) {
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === "string" && value.trim()) {
+        return value.trim();
+      }
+      if (Array.isArray(value) && value.length > 0) {
+        return value;
+      }
+      if (value && typeof value === "object") {
+        return value;
+      }
+    }
+  }
+  return "";
+}
+
+function formatAccountRole(value) {
+  const roles = Array.isArray(value) ? value : [value];
+  return roles
+    .map((role) => {
+      if (typeof role === "string") {
+        return role.replace(/^ROLE_/, "").replace(/[_-]/g, " ");
+      }
+      if (role && typeof role === "object") {
+        const roleName = role.authority || role.name || role.nome || role.nomePerfil
+          || role.perfil || role.tipo;
+        return typeof roleName === "string" ? roleName : "";
+      }
+      return "";
+    })
+    .filter(Boolean)
+    .join(", ");
+}
+
+function renderAccount(profile, profileError = null) {
+  const sources = getAccountSources(profile);
+  const subject = firstAccountValue(sources, ["sub", "username", "login", "preferred_username"]);
+  const email = firstAccountValue(sources, [
+    "email", "emailAddress", "email_address", "emailUsuario", "mail"
+  ])
+    || (subject.includes("@") ? subject : "");
+  const name = firstAccountValue(sources, [
+    "nome", "nomeUsuario", "nomeCompleto", "nome_completo",
+    "name", "fullName", "full_name", "given_name", "givenName"
+  ]);
+  const roleValue = firstAccountProperty(sources, [
+    "perfil", "role", "roles", "authorities", "authority", "scope", "scopes"
+  ]);
+  const role = formatAccountRole(roleValue);
+  const explicitStatus = firstAccountValue(sources, ["status", "situacao", "accountStatus"]);
+  const activeSource = sources.find((source) => typeof (source.ativo ?? source.active) === "boolean");
+  const isActive = activeSource ? activeSource.ativo ?? activeSource.active : null;
+  const status = explicitStatus
+    || (typeof isActive === "boolean" ? (isActive ? "Ativo" : "Inativo") : "")
+    || (!profileError && sources.length > 0 ? "Autenticado" : "Não informado");
+  const entries = [
+    ["Nome", name || "Não informado"],
+    ["E-mail", email || "Não informado"],
+    ["Perfil", role || "Não informado"],
+    ["Status do acesso", status]
+  ];
   const fragment = document.createDocumentFragment();
   entries.forEach(([key, value]) => {
     const card = document.createElement("dl");
     card.className = "data-card";
 
     const label = document.createElement("dt");
-    label.textContent = key
-      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-      .replace(/[_-]/g, " ");
+    label.textContent = key;
 
     const content = document.createElement("dd");
-    if (value === null || value === undefined) {
-      content.textContent = "—";
-    } else if (typeof value === "object") {
-      content.textContent = JSON.stringify(value);
-    } else {
-      content.textContent = String(value);
-    }
-
+    content.textContent = value;
     card.append(label, content);
     fragment.append(card);
   });
 
   accountCards.replaceChildren(fragment);
-  dashboardMessage.hidden = true;
+  dashboardGreeting.textContent = name
+    ? `Olá, ${name}. Acompanhe os principais indicadores da galeria.`
+    : "Acompanhe os principais indicadores da galeria.";
+  const hasProfile = Boolean(name || email || role);
+  const hasCompleteProfile = Boolean(name && email && role);
+  dashboardMessage.textContent = hasProfile
+    ? profileError
+      ? "Não foi possível consultar o perfil na API; os dados disponíveis estão abaixo."
+      : hasCompleteProfile
+        ? "Dados do usuário carregados."
+        : "Dados carregados. Um ou mais campos não foram fornecidos pela API."
+    : profileError
+      ? "Não foi possível carregar os dados da conta. Verifique a conexão e tente novamente."
+      : "A API não retornou nome, e-mail ou perfil para exibição.";
+  dashboardMessage.classList.toggle("message-error", !hasProfile);
+  dashboardMessage.hidden = false;
 }
 
 async function loadAccount() {
   try {
-    const data = await apiRequest(API_CONFIG.accountPath);
-    renderAccount(data);
+    const profile = await apiRequest(API_CONFIG.accountPath);
+    renderAccount(profile);
   } catch (error) {
-    // Token expirado/invalidado: remova-o para que a pessoa possa autenticar novamente.
     if (error.message.startsWith("Sessão inválida")) {
       localStorage.removeItem("authToken");
       window.location.href = "index.html";
       return;
     }
 
-    dashboardMessage.textContent = error.message;
-    dashboardMessage.classList.add("message-error");
-    dashboardMessage.setAttribute("role", "alert");
-    dashboardMessage.hidden = false;
+    console.warn(`Não foi possível consultar o perfil em ${API_CONFIG.accountPath}.`, error);
+    renderAccount(null, error);
   }
+}
+
+function setOverviewMetric(element, value, isError = false) {
+  element.textContent = value;
+  element.classList.toggle("overview-metric-error", isError);
+}
+
+function showOverviewMessage(message, isError = false) {
+  overviewMessage.textContent = message;
+  overviewMessage.classList.toggle("message-error", isError);
+  overviewMessage.setAttribute("role", isError ? "alert" : "status");
+  overviewMessage.hidden = !message;
+}
+
+function countActiveExhibitions(exhibitions) {
+  const today = new Date();
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return exhibitions.filter((exhibition) => {
+    if (!exhibition || typeof exhibition !== "object" || Array.isArray(exhibition)) {
+      throw new Error("A API retornou uma exposição em formato inválido.");
+    }
+
+    const isActive = exhibition.ativa ?? exhibition.ativo ?? exhibition.active;
+    if (typeof isActive === "boolean") {
+      return isActive;
+    }
+
+    const status = String(exhibition.status || exhibition.situacao || "").toLocaleLowerCase("pt-BR");
+    if (["ativa", "ativo", "active"].includes(status)) {
+      return true;
+    }
+    if (["inativa", "inativo", "encerrada", "encerrado", "inactive"].includes(status)) {
+      return false;
+    }
+
+    const startValue = exhibition.dataInicio;
+    const endValue = exhibition.dataFim;
+    if (typeof startValue !== "string" || typeof endValue !== "string") {
+      throw new Error("Não foi possível determinar exposições ativas: a API deve retornar dataInicio e dataFim.");
+    }
+
+    const start = new Date(`${startValue.slice(0, 10)}T00:00:00`);
+    const end = new Date(`${endValue.slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      throw new Error("A API retornou uma data inválida para uma exposição.");
+    }
+    return start <= todayDate && todayDate <= end;
+  }).length;
+}
+
+async function loadOverview() {
+  setOverviewMetric(overviewArtworkCount, "Carregando…");
+  setOverviewMetric(overviewActiveExhibitionCount, "Carregando…");
+  setOverviewMetric(overviewInsuranceTotal, "Carregando…");
+  showOverviewMessage("Carregando indicadores…");
+  const errors = [];
+
+  try {
+    const response = await apiRequest(companyScopedPath(API_CONFIG.artworksPath));
+    const artworks = extractCatalogList(response);
+    setOverviewMetric(overviewArtworkCount, String(artworks.length));
+
+    try {
+      let totalCents = 0;
+      artworks.forEach((artwork) => {
+        const value = artwork && artwork.valorSeguro;
+        const amount = Number(value);
+        if (value === null || value === undefined || value === ""
+          || !Number.isFinite(amount) || amount < 0) {
+          throw new Error("Uma ou mais obras não possuem um valor de seguro válido.");
+        }
+        const cents = Math.round(amount * 100);
+        if (!Number.isSafeInteger(cents) || !Number.isSafeInteger(totalCents + cents)) {
+          throw new Error("O valor total do seguro excede o limite de cálculo seguro.");
+        }
+        totalCents += cents;
+      });
+      setOverviewMetric(overviewInsuranceTotal, formatCurrency(totalCents / 100));
+    } catch (error) {
+      setOverviewMetric(overviewInsuranceTotal, "Indisponível", true);
+      errors.push(`valor do seguro: ${error.message}`);
+    }
+  } catch (error) {
+    setOverviewMetric(overviewArtworkCount, "Indisponível", true);
+    setOverviewMetric(overviewInsuranceTotal, "Indisponível", true);
+    errors.push(`obras: ${error.message}`);
+  }
+
+  try {
+    const response = await apiRequest(companyScopedPath(API_CONFIG.exhibitionsPath));
+    const exhibitions = extractCatalogList(response);
+    setOverviewMetric(overviewActiveExhibitionCount, String(countActiveExhibitions(exhibitions)));
+  } catch (error) {
+    setOverviewMetric(overviewActiveExhibitionCount, "Indisponível", true);
+    errors.push(`exposições: ${error.message}`);
+  }
+
+  if (errors.length > 0) {
+    showOverviewMessage(`Não foi possível carregar todos os indicadores (${errors.join("; ")}).`, true);
+    return false;
+  }
+
+  showOverviewMessage("Indicadores atualizados.");
+  return true;
 }

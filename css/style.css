@@ -1,12 +1,28 @@
 :root {
   color-scheme: light;
-  --color-primary: #4f46e5;
-  --color-primary-dark: #4338ca;
-  --color-text: #172033;
-  --color-muted: #667085;
-  --color-surface: #ffffff;
-  --color-background: #f4f7fb;
-  --color-border: #e5e9f2;
+  --bg-primary: #f4f7fb;
+  --text-primary: #172033;
+  --text-secondary: #667085;
+  --card-bg: #ffffff;
+  --border-color: #e5e9f2;
+  --accent-color: #b89556;
+  --accent-color-hover: #a17d40;
+  --color-primary: var(--accent-color);
+  --color-primary-dark: var(--accent-color-hover);
+  --color-text: var(--text-primary);
+  --color-muted: var(--text-secondary);
+  --color-surface: var(--card-bg);
+  --color-background: var(--bg-primary);
+  --color-border: var(--border-color);
+  --color-input-bg: #ffffff;
+  --color-soft-surface: #fcfcfe;
+  --color-hover-surface: #f8f9fc;
+  --color-border-strong: #e4e8ec;
+  --color-placeholder: #98a2b3;
+  --color-accent-soft: #fbf8f1;
+  --color-accent-border: #e8dfcb;
+  --color-success: #23613a;
+  --color-success-background: #edf7f0;
   --color-danger: #b42318;
   --color-danger-background: #fef3f2;
   --font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -18,8 +34,38 @@
   --shadow-card: 0 18px 50px rgb(23 32 51 / 8%);
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-primary: #111827;
+  --text-primary: #e6eaf0;
+  --text-secondary: #a7b1c2;
+  --card-bg: #1b2533;
+  --border-color: #354154;
+  --accent-color: #d3b779;
+  --accent-color-hover: #e5ca8e;
+  --color-primary: var(--accent-color);
+  --color-primary-dark: var(--accent-color-hover);
+  --color-input-bg: #151e2b;
+  --color-soft-surface: #202b3a;
+  --color-hover-surface: #263244;
+  --color-border-strong: #354154;
+  --color-placeholder: #8d99aa;
+  --color-accent-soft: #302d27;
+  --color-accent-border: #554a35;
+  --color-success: #8ad1a0;
+  --color-success-background: #193326;
+  --color-danger: #ff9a91;
+  --color-danger-background: #3a2428;
+  --shadow-card: 0 18px 50px rgb(0 0 0 / 24%);
+}
+
 * {
   box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--bg-primary);
 }
 
 body {
@@ -30,6 +76,7 @@ body {
   color: var(--color-text);
   font-family: var(--font-family);
   line-height: 1.5;
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
 button,
@@ -39,14 +86,8 @@ select {
 }
 
 .auth-page {
-  --color-primary: #b89556;
-  --color-primary-dark: #a17d40;
-  --color-text: #17283d;
-  --color-muted: #788493;
-  --color-surface: #fff;
-  --color-background: #f4f6f8;
-  --color-border: #e4e8ec;
-  --shadow-card: 0 24px 70px rgb(20 37 56 / 12%), 0 3px 12px rgb(20 37 56 / 4%);
+  --color-primary: var(--accent-color);
+  --color-primary-dark: var(--accent-color-hover);
 
   display: grid;
   place-items: center;
@@ -62,10 +103,44 @@ select {
   overflow: hidden;
   width: min(100%, 460px);
   padding: clamp(1.75rem, 7vw, 3.25rem);
-  border: 1px solid rgb(255 255 255 / 90%);
+  border: 1px solid var(--color-border-strong);
   border-radius: 1.5rem;
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+}
+
+.auth-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+.theme-toggle {
+  gap: 0.55rem;
+}
+
+.theme-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.theme-icon-moon {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme-icon-sun {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme-icon-moon {
+  display: block;
 }
 
 .auth-view[hidden] {
@@ -157,12 +232,13 @@ select {
   padding: 0.75rem 0.9rem;
   border: 1px solid var(--color-border);
   border-radius: 0.7rem;
-  background: #fff;
+  background: var(--color-input-bg);
   color: var(--color-text);
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
 }
 
 .form-stack input::placeholder {
-  color: #98a2b3;
+  color: var(--color-placeholder);
 }
 
 .form-stack input:focus {
@@ -180,7 +256,7 @@ select {
   border-radius: 0.7rem;
   cursor: pointer;
   font-weight: 700;
-  transition: background-color 140ms ease, transform 140ms ease;
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease, transform 140ms ease;
 }
 
 .button:hover:not(:disabled) {
@@ -201,6 +277,7 @@ select {
   margin-top: 0.75rem;
   background: #17283d;
   color: #fff;
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease, transform 140ms ease;
 }
 
 .button-primary:hover:not(:disabled) {
@@ -211,7 +288,7 @@ select {
 .button-outline {
   border-color: #b89556;
   background: transparent;
-  color: #17283d;
+  color: var(--color-text);
 }
 
 .button-outline:hover:not(:disabled) {
@@ -222,10 +299,11 @@ select {
   border-color: var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
 }
 
 .button-secondary:hover {
-  background: #f8f9fc;
+  background: var(--color-hover-surface);
 }
 
 .button-wide {
@@ -248,8 +326,8 @@ select {
 .message-success {
   padding: 0.7rem 0.8rem;
   border-radius: 0.65rem;
-  background: #edf7f0;
-  color: #23613a;
+  background: var(--color-success-background);
+  color: var(--color-success);
 }
 
 .auth-footnote {
@@ -271,14 +349,8 @@ select {
 }
 
 .dashboard-page {
-  --color-primary: #b89556;
-  --color-primary-dark: #a17d40;
-  --color-text: #17283d;
-  --color-muted: #788493;
-  --color-surface: #fff;
-  --color-background: #f4f6f8;
-  --color-border: #e4e8ec;
-  --shadow-card: 0 18px 50px rgb(20 37 56 / 8%);
+  --color-primary: var(--accent-color);
+  --color-primary-dark: var(--accent-color-hover);
 
   min-height: 100vh;
   background:
@@ -426,6 +498,14 @@ select {
   border-radius: var(--radius-card);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+}
+
+.data-card,
+.artist-form input,
+.catalog-form input,
+th {
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
 }
 
 .panel h2,
@@ -450,6 +530,43 @@ select {
   margin-bottom: 1.5rem;
 }
 
+.overview-panel {
+  margin-top: 1.5rem;
+}
+
+.overview-card h3 {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.overview-card .overview-metric-value {
+  margin: 0.6rem 0 0;
+  color: var(--color-text);
+  font-size: 1.3rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.overview-card .overview-metric-value.overview-metric-error {
+  color: var(--color-danger);
+  font-size: 1rem;
+}
+
+.overview-card-note {
+  margin: 0.35rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.overview-quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+}
+
 .artist-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -468,8 +585,9 @@ select {
   padding: 0.7rem 0.85rem;
   border: 1px solid var(--color-border);
   border-radius: 0.7rem;
-  background: #fff;
+  background: var(--color-input-bg);
   color: var(--color-text);
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
 }
 
 .artist-form input:focus {
@@ -506,8 +624,9 @@ select {
   padding: 0.7rem 0.85rem;
   border: 1px solid var(--color-border);
   border-radius: 0.7rem;
-  background: #fff;
+  background: var(--color-input-bg);
   color: var(--color-text);
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
 }
 
 .catalog-form input:focus {
@@ -547,7 +666,7 @@ select {
 
 .button-danger {
   border-color: #f0c5c1;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--color-danger);
 }
 
@@ -562,43 +681,29 @@ select {
 }
 
 .insurance-panel {
-  max-width: 760px;
+  max-width: 1200px;
 }
 
 .insurance-report-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 0.65rem 1rem;
-}
-
-.insurance-report-form label {
-  grid-column: 1 / -1;
-  font-size: 0.9rem;
-  font-weight: 650;
-}
-
-.insurance-report-form select {
-  width: 100%;
-  min-height: 3rem;
-  padding: 0.7rem 0.85rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.7rem;
-  background: #fff;
-  color: var(--color-text);
-}
-
-.insurance-report-form select:focus {
-  border-color: var(--color-primary);
-  outline: 3px solid rgb(184 149 86 / 18%);
+  display: flex;
+  justify-content: flex-end;
 }
 
 .insurance-total-result {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 0.35rem 1rem;
   margin-top: 1.5rem;
   padding: 1.25rem 1.4rem;
-  border: 1px solid #e8dfcb;
+  border: 1px solid var(--color-accent-border);
   border-radius: 0.9rem;
-  background: linear-gradient(110deg, #fff, #fbf8f1);
+  background: linear-gradient(110deg, var(--color-surface), var(--color-accent-soft));
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+}
+
+.insurance-total-result[hidden] {
+  display: none;
 }
 
 .insurance-total-label {
@@ -608,12 +713,28 @@ select {
   font-weight: 650;
 }
 
+.insurance-artwork-count {
+  margin: 0;
+  text-align: right;
+  font-weight: 700;
+}
+
 .insurance-total-value {
+  grid-column: 1 / -1;
   margin: 0.35rem 0 0;
   color: var(--color-text);
   font-size: clamp(1.7rem, 5vw, 2.35rem);
   font-weight: 800;
   letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+.insurance-table-wrapper {
+  margin-top: 1rem;
+}
+
+.insurance-table-wrapper td:last-child {
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
@@ -629,7 +750,7 @@ select {
   padding: 1rem;
   border: 1px solid var(--color-border);
   border-radius: 0.85rem;
-  background: #fcfcfe;
+  background: var(--color-soft-surface);
 }
 
 .data-card dt {
@@ -648,7 +769,8 @@ select {
 .dashboard-welcome {
   margin-top: 1.5rem;
   border-left: 4px solid #b89556;
-  background: linear-gradient(110deg, #fff, #fbf8f1);
+  background: linear-gradient(110deg, var(--color-surface), var(--color-accent-soft));
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
 }
 
 .dashboard-welcome .muted,
@@ -668,8 +790,8 @@ select {
   margin-bottom: 1rem;
   place-items: center;
   border-radius: 0.8rem;
-  background: #f6f0e4;
-  color: #a17d40;
+  background: var(--color-accent-soft);
+  color: var(--color-primary-dark);
   font-size: 1.3rem;
 }
 
@@ -692,7 +814,7 @@ td {
 }
 
 th {
-  background: #f8f9fc;
+  background: var(--color-hover-surface);
   color: var(--color-muted);
   font-size: 0.8rem;
   font-weight: 700;
@@ -737,12 +859,8 @@ tbody tr:last-child td {
       grid-column: auto;
     }
 
-    .insurance-report-form {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .insurance-report-form label {
-      grid-column: auto;
+    .insurance-report-form .button {
+      width: 100%;
     }
   }
 
