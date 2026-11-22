@@ -2,7 +2,7 @@
 // O endereço informado é uma página Swagger, não uma URL de API; por isso
 // usamos a origem do servidor. Ajuste os caminhos abaixo conforme o Swagger.
 const API_CONFIG = {
-  baseUrl: "http://localhost:8080",
+  baseUrl: "https://artgallery-1o6e.onrender.com",
   loginPath: "/login",
   registerPath: "/usuarios",
   accountPath: "/usuarios/me",
@@ -10,7 +10,6 @@ const API_CONFIG = {
   artistsPath: "/artistas",
   artworksPath: "/obras",
   exhibitionsPath: "/exposicoes",
-  // Ajuste o modelo de caminho se a rota publicada no Swagger for diferente.
   insuranceReportPath: "/exposicoes/{id}/relatorio-seguro"
 };
 
