@@ -56,6 +56,7 @@ function exhibitionArtworkId(reference) {
 function exhibitionArtworkReferences(exhibition) {
   const candidates = [
     exhibition.obras,
+    exhibition.obraIds,
     exhibition.obrasIds,
     exhibition.obras_ids,
     exhibition.obrasVinculadas,
@@ -71,7 +72,7 @@ function exhibitionArtworkReferences(exhibition) {
       continue;
     }
     if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
-      for (const key of ["content", "data", "obras", "obrasIds", "items"]) {
+      for (const key of ["content", "data", "obras", "obraIds", "obrasIds", "items"]) {
         if (Array.isArray(candidate[key]) && candidate[key].length > 0) {
           return candidate[key];
         }
@@ -101,7 +102,7 @@ function exhibitionArtworkNames(exhibition) {
   return exhibitionArtworkReferences(exhibition).map((reference) => {
     const id = exhibitionArtworkId(reference);
     const availableArtwork = obrasDisponiveis.find(
-      (item) => String(item.id) === String(id)
+      (item) => String(artworkId(item)) === String(id)
     );
     return exhibitionArtworkTitle(reference) || availableArtwork?.titulo ||
       availableArtwork?.title || (id === null ? "" : `Obra ${id}`);
@@ -137,6 +138,19 @@ function dateToOrdinal(value) {
   return numericYear * 10000 + numericMonth * 100 + numericDay;
 }
 
+function formatDisplayDate(value) {
+  const date = String(value ?? "").trim();
+  const isoDate = date.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|[T\s])/);
+  if (isoDate && dateToOrdinal(date) !== null) {
+    return `${isoDate[3]}/${isoDate[2]}/${isoDate[1]}`;
+  }
+  const brazilianDate = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (brazilianDate && dateToOrdinal(date) !== null) {
+    return date;
+  }
+  return date || "—";
+}
+
 function renderObrasSelecionadas() {
   selectedArtworksContainer.replaceChildren();
 
@@ -167,11 +181,12 @@ function pesquisarObras() {
   }
 
   const obrasFiltradas = obrasDisponiveis.filter((obra) => {
+    const id = artworkId(obra);
     const jaSelecionada = obrasSelecionadas.some(
-      (selecionada) => String(selecionada.id) === String(obra.id)
+      (selecionada) => String(selecionada.id) === String(id)
     );
     const titulo = String(obra.titulo ?? obra.title ?? "");
-    return !jaSelecionada && titulo.toLocaleLowerCase("pt-BR").includes(termo);
+    return id !== null && !jaSelecionada && titulo.toLocaleLowerCase("pt-BR").includes(termo);
   });
 
   obrasFiltradas.forEach((obra) => {
@@ -179,8 +194,8 @@ function pesquisarObras() {
     item.type = "button";
     item.className = "obra-resultado";
     item.setAttribute("role", "option");
-    item.dataset.artworkId = String(obra.id);
-    item.textContent = obra.titulo ?? obra.title ?? `Obra ${obra.id}`;
+    item.dataset.artworkId = String(artworkId(obra));
+    item.textContent = obra.titulo ?? obra.title ?? `Obra ${artworkId(obra)}`;
     exhibitionArtworkResults.append(item);
   });
 
@@ -194,13 +209,14 @@ function pesquisarObras() {
 }
 
 function adicionarObra(obra) {
-  if (obrasSelecionadas.some((item) => String(item.id) === String(obra.id))) {
+  const id = artworkId(obra);
+  if (id === null || obrasSelecionadas.some((item) => String(item.id) === String(id))) {
     return;
   }
 
   obrasSelecionadas.push({
-    id: obra.id,
-    texto: obra.titulo ?? obra.title ?? `Obra ${obra.id}`
+    id,
+    texto: obra.titulo ?? obra.title ?? `Obra ${id}`
   });
   renderObrasSelecionadas();
   exhibitionArtworkSearch.value = "";
@@ -222,7 +238,7 @@ exhibitionArtworkResults.addEventListener("click", (event) => {
     return;
   }
   const artwork = obrasDisponiveis.find(
-    (item) => String(item.id) === option.dataset.artworkId
+    (item) => String(artworkId(item)) === option.dataset.artworkId
   );
   if (artwork) {
     adicionarObra(artwork);
@@ -284,8 +300,8 @@ const exhibitionCatalog = setupEntityCrud({
   fields: [
     { key: "nome", label: "Nome", type: "text" },
     { key: "local", label: "Local", type: "text" },
-    { key: "dataInicio", label: "Data de início", type: "date" },
-    { key: "dataFim", label: "Data de término", type: "date" }
+    { key: "dataInicio", label: "Data de início", type: "date", format: formatDisplayDate },
+    { key: "dataFim", label: "Data de término", type: "date", format: formatDisplayDate }
   ]
 });
 
@@ -1063,7 +1079,7 @@ function setupEntityCrud(config) {
         if (id === null || obrasSelecionadas.some((item) => String(item.id) === String(id))) {
           return;
         }
-        const artwork = obrasDisponiveis.find((item) => String(item.id) === String(id));
+        const artwork = obrasDisponiveis.find((item) => String(artworkId(item)) === String(id));
         obrasSelecionadas.push({
           id,
           texto: exhibitionArtworkTitle(reference) ||
@@ -1119,11 +1135,24 @@ function setupEntityCrud(config) {
 
     const isExhibition = config.name === "exposição";
     if (isExhibition) {
-      if (fields.dataInicio > fields.dataFim) {
-        showFormMessage("A data de início deve ser anterior ou igual à data de término.", true);
+      const startOrdinal = dateToOrdinal(fields.dataInicio);
+      const endOrdinal = dateToOrdinal(fields.dataFim);
+      if (startOrdinal === null || endOrdinal === null) {
+        showFormMessage("Informe datas válidas para a exposição.", true);
         return;
       }
-      fields.obrasIds = obrasSelecionadas.map((obra) => obra.id);
+      if (endOrdinal < startOrdinal) {
+        showFormMessage("A data de término não pode ser anterior à data de início.", true);
+        form.elements.namedItem("dataFim").focus();
+        return;
+      }
+      if (obrasSelecionadas.length === 0) {
+        showFormMessage("Selecione ao menos uma obra de arte para vincular à exposição.", true);
+        return;
+      }
+      fields.dataInicio = fields.dataInicio.slice(0, 10);
+      fields.dataFim = fields.dataFim.slice(0, 10);
+      fields.obraIds = obrasSelecionadas.map((obra) => obra.id);
     }
 
     let payload = fields;
@@ -1141,61 +1170,8 @@ function setupEntityCrud(config) {
     }
 
     submitButton.disabled = true;
-    submitButton.textContent = isExhibition
-      ? "Verificando disponibilidade…"
-      : editingId === null ? "Cadastrando…" : "Salvando…";
+    submitButton.textContent = editingId === null ? "Cadastrando…" : "Salvando…";
     try {
-      if (isExhibition) {
-        const response = await apiRequest(companyScopedPath(API_CONFIG.exhibitionsPath));
-        const exhibitions = extractCatalogList(response);
-        const newStart = dateToOrdinal(fields.dataInicio);
-        const newEnd = dateToOrdinal(fields.dataFim);
-
-        if (newStart === null || newEnd === null) {
-          showFormMessage("Informe um período válido para a exposição.", true);
-          return;
-        }
-
-        for (const exhibition of exhibitions) {
-          if (editingId !== null && String(exhibition.id) === String(editingId)) {
-            continue;
-          }
-
-          const existingArtworkIds = new Set(
-            exhibitionArtworkReferences(exhibition)
-              .map(exhibitionArtworkId)
-              .filter((id) => id !== null)
-              .map(String)
-          );
-          const conflictingArtwork = obrasSelecionadas.find(
-            (artwork) => existingArtworkIds.has(String(artwork.id))
-          );
-          if (conflictingArtwork) {
-            const existingStart = dateToOrdinal(exhibition.dataInicio);
-            const existingEnd = dateToOrdinal(exhibition.dataFim);
-            if (existingStart === null || existingEnd === null) {
-              showFormMessage(
-                "Não foi possível validar o período de uma exposição existente. Atualize os dados e tente novamente.",
-                true
-              );
-              return;
-            }
-
-            const datesOverlap = newStart <= existingEnd && newEnd >= existingStart;
-            if (!datesOverlap) {
-              continue;
-            }
-
-            showFormMessage(
-              `A obra "${conflictingArtwork.texto}" já está vinculada a uma exposição no período informado.`,
-              true
-            );
-            return;
-          }
-        }
-      }
-
-      submitButton.textContent = editingId === null ? "Cadastrando…" : "Salvando…";
       await apiRequest(path, { method, body: payload });
       resetForm();
       const refreshed = await load();
@@ -1205,7 +1181,16 @@ function setupEntityCrud(config) {
           : `${config.name[0].toUpperCase()}${config.name.slice(1)} atualizada com sucesso.`);
       }
     } catch (error) {
-      showFormMessage(error.message, true);
+      if (isExhibition && (error.status === 400 || error.status === 409)) {
+        const selectedTitles = obrasSelecionadas.map((artwork) => artwork.texto).join(", ");
+        const period = `${formatDisplayDate(fields.dataInicio)} a ${formatDisplayDate(fields.dataFim)}`;
+        showFormMessage(
+          `${error.message} Contexto: período ${period}; obras selecionadas: ${selectedTitles}.`,
+          true
+        );
+      } else {
+        showFormMessage(error.message, true);
+      }
     } finally {
       submitButton.disabled = false;
       submitButton.textContent = editingId === null ? config.createLabel : "Salvar alterações";
@@ -1227,7 +1212,29 @@ function setupEntityCrud(config) {
     }
 
     if (button.dataset.action === "edit") {
-      edit(record);
+      if (config.name === "exposição") {
+        button.disabled = true;
+        showListMessage("Carregando os dados da exposição…");
+        try {
+          const response = await apiRequest(companyScopedPath(
+            `${config.path}/${encodeURIComponent(String(record.id))}`
+          ));
+          const details = response && typeof response === "object"
+            ? response.data ?? response.exposicao ?? response
+            : response;
+          if (!details || typeof details !== "object" || Array.isArray(details)) {
+            throw new Error("A API não retornou os dados da exposição em formato válido.");
+          }
+          edit({ ...record, ...details, id: details.id ?? record.id });
+          showListMessage("");
+        } catch (error) {
+          showListMessage(`Não foi possível carregar a exposição para edição: ${error.message}`, true);
+        } finally {
+          button.disabled = false;
+        }
+      } else {
+        edit(record);
+      }
     } else if (button.dataset.action === "delete") {
       await remove(record);
     }

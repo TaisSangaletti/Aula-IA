@@ -1,8 +1,6 @@
 // Configuração central da API.
-// O endereço informado é uma página Swagger, não uma URL de API; por isso
-// usamos a origem do servidor. Ajuste os caminhos abaixo conforme o Swagger.
 const API_CONFIG = {
-  baseUrl: "https://artgallery-1o6e.onrender.com",
+  baseUrl: "http://localhost:8080",
   loginPath: "/login",
   registerPath: "/usuarios",
   accountPath: "/usuarios/me",
@@ -66,16 +64,60 @@ async function apiRequest(path, options = {}) {
     const messages = {
       401: "Sessão inválida ou credenciais incorretas. Verifique os dados e tente novamente.",
       404: "O endpoint solicitado não foi encontrado. Confira o caminho configurado no Swagger.",
+      400: "Os dados enviados são inválidos. Revise os campos e tente novamente.",
+      409: "Há um conflito com os dados enviados. Revise o período e as obras selecionadas.",
       500: "O servidor encontrou um erro. Tente novamente mais tarde."
     };
-    const serverMessage = data && typeof data === "object"
-      ? data.message || data.error || data.detail
-      : null;
-    const message = messages[response.status] || serverMessage || `A API respondeu com erro HTTP ${response.status}.`;
+    const serverMessage = getApiErrorMessage(data);
+    const message = serverMessage || messages[response.status]
+      || `A API respondeu com erro HTTP ${response.status}.`;
 
     console.error(`Erro HTTP ${response.status} em ${path}.`, data);
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   return data;
+}
+
+function getApiErrorMessage(data) {
+  if (typeof data === "string" && data.trim()) {
+    return data.trim();
+  }
+  if (Array.isArray(data)) {
+    return [...new Set(data.map(getApiErrorMessage).filter(Boolean))].join(" ");
+  }
+  if (!data || typeof data !== "object") {
+    return "";
+  }
+
+  const messages = [];
+  for (const key of ["message", "mensagem", "detail", "details", "error", "erro", "title"]) {
+    const value = data[key];
+    if (typeof value === "string" && value.trim()) {
+      messages.push(value.trim());
+    }
+    if (Array.isArray(value) || (value && typeof value === "object")) {
+      messages.push(getApiErrorMessage(value));
+    }
+  }
+
+  for (const key of ["errors", "erros", "data"]) {
+    const value = data[key];
+    if (value && typeof value === "object") {
+      messages.push(getApiErrorMessage(value));
+      if (!Array.isArray(value)) {
+        const fieldMessages = Object.entries(value)
+          .flatMap(([field, messages]) => {
+            const details = Array.isArray(messages) ? messages : [messages];
+            return details
+              .filter((item) => typeof item === "string" && item.trim())
+              .map((item) => `${field}: ${item.trim()}`);
+          });
+        messages.push(...fieldMessages);
+      }
+    }
+  }
+  return [...new Set(messages.filter(Boolean))].join(" ");
 }
