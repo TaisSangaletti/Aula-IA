@@ -6,13 +6,7 @@
   <meta name="theme-color" content="#17283d">
   <meta name="description" content="Painel administrativo do ArtGallery.">
   <title>Painel | ArtGallery</title>
-  <script>
-    (() => {
-      const savedTheme = localStorage.getItem("theme");
-      const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      document.documentElement.dataset.theme = savedTheme || (systemPrefersDark ? "dark" : "light");
-    })();
-  </script>
+  <script src="js/theme-init.js"></script>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/dashboard.css">
   <script type="module" src="js/theme-toggle.js"></script>
@@ -367,7 +361,7 @@
           <div>
             <p class="eyebrow">RELATÓRIO</p>
             <h2 id="insurance-report-heading">Seguro das obras cadastradas</h2>
-            <p class="muted">Os valores são consultados diretamente no cadastro de obras da empresa selecionada.</p>
+            <p class="muted">Os valores são calculados com base nas obras cadastradas para a empresa selecionada (GET /obras).</p>
           </div>
         </div>
         <form id="insurance-report-form" class="insurance-report-form">

@@ -1,26 +1,26 @@
 
-```markdown
 # 🎨 ArtGallery — Front-End
 
-Interface web para o **ArtGallery**, um sistema de gestão administrativa de galerias e exposições de arte. Este projeto foi desenvolvido com foco em arquitetura Multi-Page Application (MPA), semântica HTML5, acessibilidade e integração com APIs REST.
+Interface web para o **ArtGallery**, um sistema de gestão administrativa de galerias e exposições de arte. O login e o painel são páginas HTML distintas; dentro do painel, a navegação entre módulos ocorre sem recarregar a página.
 
 ---
 
 ## 📋 Funcionalidades Principais
 
 * **Autenticação e Cadastro (`index.html`):**
-  * Fluxo dinâmico em página única alternando entre **Login** e **Cadastro de Novo Usuário**[cite: 1].
-  * Validação nativa de campos (CPF com 11 dígitos, data de nascimento, senha com mínimo de 8 caracteres e vínculo por ID da empresa)[cite: 1].
+  * Fluxo de uma página alternando entre **Login** e **Cadastro de Novo Usuário**.
+  * Login enviado como `{ login, senha }`; o Swagger descreve `login` como CPF (`string`), sem especificar se deve conter máscara. O front-end envia o valor informado sem remover a máscara.
+  * Validação de CPF no cadastro, data de nascimento, senha com mínimo de 8 caracteres e vínculo por ID da empresa. O Swagger tipa `empresa_id` como inteiro, mas não define limite mínimo; o front-end mantém a regra não negativa até confirmar se o ID zero é inválido.
 * **Painel Administrativo (`dashboard.html`):**
-  * **Visão Geral (Início):** Exibição dos dados da conta autenticada e indicadores em tempo real do acervo (total de obras cadastradas, exposições ativas e valor total segurado)[cite: 2].
-  * **Gestão de Artistas:** Cadastro, edição e listagem de artistas representados pela galeria (Nome, CPF, Nacionalidade e Status)[cite: 2].
-  * **Gestão de Obras de Arte:** Controle completo do acervo com título, técnica, ano de criação (4 dígitos) e valor do seguro em Reais (R$)[cite: 2].
-  * **Programação de Exposições:** Cadastro e acompanhamento de exposições com nome, local, data de início e data de término[cite: 2].
-  * **Relatório de Seguro:** Consulta individual do valor segurado por obra e cálculo consolidado do valor total do acervo da empresa selecionada[cite: 2].
+  * **Visão Geral (Início):** Dados da conta e indicadores do acervo.
+  * **Gestão de Artistas:** Cadastro, edição e listagem de artistas.
+  * **Gestão de Obras de Arte:** Cadastro de título, técnica, ano de criação e valor do seguro; o front-end mantém a validação não negativa existente.
+  * **Programação de Exposições:** Cadastro, edição e listagem de exposições e obras vinculadas.
+  * **Relatório de Seguro:** Obtido de `GET /obras`; o front-end exibe os valores cadastrados e calcula o total. Não há um endpoint de relatório configurado no contrato OpenAPI consultado.
 * **Gestão Multi-Empresa:**
-  * Barra lateral retrátil dedicada para visualização e troca rápida da empresa ativa no painel[cite: 2].
+  * Barra lateral retrátil para visualização e troca da empresa ativa no painel.
 * **Tema Claro e Escuro (Dark/Light Mode):**
-  * Alternância de tema com detecção automática da preferência do sistema operacional e persistência via `localStorage`[cite: 1, 2].
+  * Alternância de tema com detecção da preferência do sistema operacional e persistência via `localStorage`. O tema inicial é aplicado antes do carregamento dos estilos; os botões de cada página permanecem no local adequado ao seu layout.
 
 ---
 
@@ -36,6 +36,7 @@ Aula-IA/
 │   └── assets/
 │       └── logo.png         # Identidade visual do ArtGallery
 └── js/
+    ├── theme-init.js        # Aplica o tema inicial antes dos estilos
     ├── theme-toggle.js      # Módulo ES para alternância e persistência de tema
     ├── api.js               # Configuração de requisições e comunicação com o back-end
     ├── login.js             # Lógica de autenticação e cadastro de usuários
@@ -53,7 +54,7 @@ Aula-IA/
 * **CSS3:** Estilização responsiva e customização de temas claro/escuro via `data-theme`.
 
 
-* **JavaScript (ES6+):** Manipulação do DOM, módulos nativos (`type="module"`) e consumo assíncrono de API REST.
+* **JavaScript (ES6+):** Manipulação do DOM, módulo ES para os controles de tema e consumo assíncrono da API REST via `fetch`.
 
 
 
@@ -63,7 +64,7 @@ Aula-IA/
 
 1. **Clone o repositório:**
 ```bash
-git clone [https://github.com/TaisSangaletti/Aula-IA.git](https://github.com/TaisSangaletti/Aula-IA.git)
+git clone https://github.com/TaisSangaletti/Aula-IA.git
 
 ```
 
@@ -75,26 +76,13 @@ cd Aula-IA
 ```
 
 
-3. **Inicie um servidor local:**
-* Como o projeto utiliza **ES Modules** (`js/theme-toggle.js`), abra o arquivo `index.html` através de um servidor local (como a extensão **Live Server** do VS Code ou similar) para evitar bloqueios de CORS do navegador.
+3. **Inicie um servidor HTTP para o front-end**, por exemplo, com Live Server no VS Code ou `python -m http.server 5500`, e abra o endereço local servido. O módulo ES de tema não deve ser carregado diretamente por `file://`.
 
-
-
-
-4. **Conexão com o Back-End:**
-* Certifique-se de que a API REST do **ArtGallery** esteja em execução e configurada no arquivo `js/api.js` para habilitar o login e o carregamento dos dados no painel.
-
-
-
-
+4. **Conexão com o Back-End:** A configuração atual usa `http://localhost:8080` em `js/api.js`. Como o front-end e a API normalmente usam portas diferentes, a API deve permitir via CORS a origem usada pelo servidor front-end.
 
 ---
 
 ## 👩‍💻 Autoria
 
 Desenvolvido por **Taís Sangaletti**.
-
-```
-
-```
 

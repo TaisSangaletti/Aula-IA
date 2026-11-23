@@ -6,13 +6,7 @@
   <meta name="theme-color" content="#f4f6f8">
   <meta name="description" content="Acesse o ArtGallery, sistema de gestão para exposições de arte.">
   <title>Entrar | ArtGallery</title>
-  <script>
-    (() => {
-      const savedTheme = localStorage.getItem("theme");
-      const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      document.documentElement.dataset.theme = savedTheme || (systemPrefersDark ? "dark" : "light");
-    })();
-  </script>
+  <script src="js/theme-init.js"></script>
   <link rel="stylesheet" href="css/style.css">
   <script type="module" src="js/theme-toggle.js"></script>
   <script src="js/api.js" defer></script>
@@ -47,7 +41,7 @@
       <form id="login-form" class="form-stack">
         <label for="username">CPF</label>
         <input id="username" name="username" type="text" autocomplete="username"
-          placeholder="voce@exemplo.com" aria-describedby="login-message" required>
+          placeholder="Digite seu CPF" aria-describedby="login-message" required>
 
         <label for="password">Senha</label>
         <input id="password" name="password" type="password" autocomplete="current-password"

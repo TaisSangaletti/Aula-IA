@@ -16,14 +16,6 @@ const registerCpf = document.querySelector("#register-cpf");
 const registerPassword = document.querySelector("#register-password");
 const registerButton = document.querySelector("#register-button");
 
-const registrationNotice = sessionStorage.getItem("registrationNotice");
-if (registrationNotice) {
-  loginMessage.textContent = registrationNotice;
-  loginMessage.classList.add("message-success");
-  loginMessage.hidden = false;
-  sessionStorage.removeItem("registrationNotice");
-}
-
 function showAuthView(viewToShow, fieldToFocus) {
   const isRegisterView = viewToShow === registerView;
   loginView.hidden = isRegisterView;
@@ -101,8 +93,15 @@ registerForm.addEventListener("submit", async (event) => {
       body: user
     });
 
-    sessionStorage.setItem("registrationNotice", "Cadastro realizado com sucesso! Agora você pode entrar.");
-    window.location.href = "index.html";
+    registerForm.reset();
+    registerMessage.textContent = "";
+    registerMessage.hidden = true;
+    loginMessage.textContent = "Cadastro realizado com sucesso! Agora você pode entrar.";
+    loginMessage.classList.remove("message-error");
+    loginMessage.classList.add("message-success");
+    loginMessage.setAttribute("role", "status");
+    loginMessage.hidden = false;
+    showAuthView(loginView, document.querySelector("#username"));
   } catch (error) {
     registerMessage.textContent = error.message;
     registerMessage.classList.add("message-error");
@@ -119,7 +118,7 @@ loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   loginMessage.hidden = true;
   loginMessage.textContent = "";
-  loginMessage.classList.remove("message-error");
+  loginMessage.classList.remove("message-error", "message-success");
 
   const formData = new FormData(loginForm);
   const username = String(formData.get("username") || "").trim();
@@ -136,25 +135,20 @@ loginForm.addEventListener("submit", async (event) => {
   loginButton.textContent = "Entrando…";
 
   try {
-    // Adapte os nomes dos campos ao contrato real do endpoint no Swagger.
     const response = await apiRequest(API_CONFIG.loginPath, {
-  method: "POST",
-  auth: false,
-  body: {
-    login: username,
-    senha: password
-  }
-});
+      method: "POST",
+      auth: false,
+      body: {
+        login: username,
+        senha: password
+      }
+    });
 
-console.log("RESPOSTA LOGIN:", response);
-console.log("TOKEN:", response.token);
-console.log("OBJETO JSON:", JSON.stringify(response, null, 2));
+    if (!response || typeof response !== "object" || Array.isArray(response)) {
+      throw new Error("A resposta de login da API está em formato inválido.");
+    }
 
-
-    // APIs costumam nomear o JWT como token, accessToken ou access_token.
-    const token = response && typeof response === "object"
-      ? response.token || response.accessToken || response.access_token
-      : null;
+    const token = response.token || response.accessToken || response.access_token;
 
     if (typeof token !== "string" || !token) {
       throw new Error("A resposta de login não contém um token. Confira o formato retornado pela API.");
