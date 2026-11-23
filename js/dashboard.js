@@ -30,7 +30,218 @@ const companySelector = document.querySelector("#company-selector");
 const currentCompany = document.querySelector("#current-company");
 const changeCompanyButton = document.querySelector("#change-company-btn");
 const companyMessage = document.querySelector("#company-message");
+const obrasSelecionadas = [];
+let obrasDisponiveis = [];
+const exhibitionArtworkSearch = document.querySelector("#obra-busca");
+const exhibitionArtworkResults = document.querySelector("#obras-encontradas");
+const selectedArtworksContainer = document.querySelector("#obras-selecionadas");
 
+function artworkId(artwork) {
+  if (artwork && typeof artwork === "object") {
+    return artwork.id ?? artwork.obraId ?? artwork.obra_id ??
+      artwork.idObra ?? artwork.id_obra ?? artwork.artworkId ??
+      artwork.artwork_id ?? null;
+  }
+  return artwork ?? null;
+}
+
+function exhibitionArtworkId(reference) {
+  const artwork = reference && typeof reference === "object"
+    ? reference.obra ?? reference.artwork ?? reference.obraDeArte ??
+      reference.obraVinculada ?? reference
+    : reference;
+  return artworkId(artwork);
+}
+
+function exhibitionArtworkReferences(exhibition) {
+  const candidates = [
+    exhibition.obras,
+    exhibition.obrasIds,
+    exhibition.obras_ids,
+    exhibition.obrasVinculadas,
+    exhibition.artworks,
+    exhibition.works
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      if (candidate.length > 0) {
+        return candidate;
+      }
+      continue;
+    }
+    if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
+      for (const key of ["content", "data", "obras", "obrasIds", "items"]) {
+        if (Array.isArray(candidate[key]) && candidate[key].length > 0) {
+          return candidate[key];
+        }
+      }
+      if (exhibitionArtworkId(candidate) !== null || exhibitionArtworkTitle(candidate)) {
+        return [candidate];
+      }
+      continue;
+    }
+    if (candidate !== null && candidate !== undefined && candidate !== "") {
+      return [candidate];
+    }
+  }
+  return [];
+}
+
+function exhibitionArtworkTitle(reference) {
+  const artwork = reference && typeof reference === "object"
+    ? reference.obra ?? reference.artwork ?? reference.obraDeArte ??
+      reference.obraVinculada ?? reference
+    : null;
+  return artwork?.titulo || artwork?.title || artwork?.tituloObra ||
+    artwork?.nome || null;
+}
+
+function exhibitionArtworkNames(exhibition) {
+  return exhibitionArtworkReferences(exhibition).map((reference) => {
+    const id = exhibitionArtworkId(reference);
+    const availableArtwork = obrasDisponiveis.find(
+      (item) => String(item.id) === String(id)
+    );
+    return exhibitionArtworkTitle(reference) || availableArtwork?.titulo ||
+      availableArtwork?.title || (id === null ? "" : `Obra ${id}`);
+  }).filter(Boolean);
+}
+
+function dateToOrdinal(value) {
+  const date = String(value ?? "").trim();
+  let year;
+  let month;
+  let day;
+  let match = date.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|[T\s])/);
+
+  if (match) {
+    [, year, month, day] = match;
+  } else {
+    match = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) {
+      return null;
+    }
+    [, day, month, year] = match;
+  }
+
+  const numericYear = Number(year);
+  const numericMonth = Number(month);
+  const numericDay = Number(day);
+  const dateValue = new Date(Date.UTC(numericYear, numericMonth - 1, numericDay));
+  if (dateValue.getUTCFullYear() !== numericYear
+    || dateValue.getUTCMonth() !== numericMonth - 1
+    || dateValue.getUTCDate() !== numericDay) {
+    return null;
+  }
+  return numericYear * 10000 + numericMonth * 100 + numericDay;
+}
+
+function renderObrasSelecionadas() {
+  selectedArtworksContainer.replaceChildren();
+
+  obrasSelecionadas.forEach((artwork) => {
+    const tag = document.createElement("span");
+    tag.className = "obra-tag";
+    tag.setAttribute("role", "listitem");
+    tag.append(document.createTextNode(artwork.texto));
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "obra-tag-remove";
+    removeButton.dataset.artworkId = String(artwork.id);
+    removeButton.setAttribute("aria-label", `Remover ${artwork.texto}`);
+    removeButton.textContent = "×";
+    tag.append(removeButton);
+    selectedArtworksContainer.append(tag);
+  });
+}
+
+function pesquisarObras() {
+  const termo = exhibitionArtworkSearch.value.trim().toLocaleLowerCase("pt-BR");
+  exhibitionArtworkResults.replaceChildren();
+
+  if (!termo) {
+    exhibitionArtworkResults.hidden = true;
+    return;
+  }
+
+  const obrasFiltradas = obrasDisponiveis.filter((obra) => {
+    const jaSelecionada = obrasSelecionadas.some(
+      (selecionada) => String(selecionada.id) === String(obra.id)
+    );
+    const titulo = String(obra.titulo ?? obra.title ?? "");
+    return !jaSelecionada && titulo.toLocaleLowerCase("pt-BR").includes(termo);
+  });
+
+  obrasFiltradas.forEach((obra) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "obra-resultado";
+    item.setAttribute("role", "option");
+    item.dataset.artworkId = String(obra.id);
+    item.textContent = obra.titulo ?? obra.title ?? `Obra ${obra.id}`;
+    exhibitionArtworkResults.append(item);
+  });
+
+  if (obrasFiltradas.length === 0) {
+    const emptyResult = document.createElement("p");
+    emptyResult.className = "obra-resultado-vazio";
+    emptyResult.textContent = "Nenhuma obra disponível encontrada.";
+    exhibitionArtworkResults.append(emptyResult);
+  }
+  exhibitionArtworkResults.hidden = false;
+}
+
+function adicionarObra(obra) {
+  if (obrasSelecionadas.some((item) => String(item.id) === String(obra.id))) {
+    return;
+  }
+
+  obrasSelecionadas.push({
+    id: obra.id,
+    texto: obra.titulo ?? obra.title ?? `Obra ${obra.id}`
+  });
+  renderObrasSelecionadas();
+  exhibitionArtworkSearch.value = "";
+  pesquisarObras();
+}
+
+function limparObrasSelecionadas() {
+  obrasSelecionadas.splice(0, obrasSelecionadas.length);
+  exhibitionArtworkSearch.value = "";
+  exhibitionArtworkResults.replaceChildren();
+  exhibitionArtworkResults.hidden = true;
+  renderObrasSelecionadas();
+}
+
+exhibitionArtworkSearch.addEventListener("input", pesquisarObras);
+exhibitionArtworkResults.addEventListener("click", (event) => {
+  const option = event.target.closest("button[data-artwork-id]");
+  if (!option) {
+    return;
+  }
+  const artwork = obrasDisponiveis.find(
+    (item) => String(item.id) === option.dataset.artworkId
+  );
+  if (artwork) {
+    adicionarObra(artwork);
+  }
+});
+selectedArtworksContainer.addEventListener("click", (event) => {
+  const removeButton = event.target.closest("button[data-artwork-id]");
+  if (!removeButton) {
+    return;
+  }
+  const index = obrasSelecionadas.findIndex(
+    (item) => String(item.id) === removeButton.dataset.artworkId
+  );
+  if (index !== -1) {
+    obrasSelecionadas.splice(index, 1);
+    renderObrasSelecionadas();
+    pesquisarObras();
+  }
+});
 let artists = [];
 let editingArtistId = null;
 let selectedCompanyId = localStorage.getItem("selectedCompanyId");
@@ -56,6 +267,27 @@ const artworkCatalog = setupEntityCrud({
   ]
 });
 const exhibitionCatalog = setupEntityCrud({
+  name: "exposição",
+  path: API_CONFIG.exhibitionsPath,
+  formId: "exhibition-form",
+  headingId: "exhibition-form-heading",
+  idReferenceId: "exhibition-id-reference",
+  formMessageId: "exhibition-form-message",
+  submitButtonId: "exhibition-submit-button",
+  cancelButtonId: "exhibition-cancel-button",
+  tableBodyId: "exhibitions-table-body",
+  listMessageId: "exhibitions-list-message",
+  emptyMessage: "Nenhuma exposição cadastrada.",
+  createLabel: "Cadastrar exposição",
+  includeIdInUpdate: false,
+  hasAdditionalColumn: true,
+  fields: [
+    { key: "nome", label: "Nome", type: "text" },
+    { key: "local", label: "Local", type: "text" },
+    { key: "dataInicio", label: "Data de início", type: "date" },
+    { key: "dataFim", label: "Data de término", type: "date" }
+  ]
+});
 
 // Proteção simples de rota no frontend: sem token, volte ao login.
 if (!localStorage.getItem("authToken")) {
@@ -98,10 +330,9 @@ function showSection(sectionName) {
     loadArtists();
   } else if (sectionName === "obras") {
     artworkCatalog.load();
-  else if (sectionName === "exposicoes") {
-    exhibitionCatalog.load();
-    carregarObrasParaExposicao();
-} else if (sectionName === "seguros") {
+  } else if (sectionName === "exposicoes") {
+    carregarObrasParaExposicao().then(() => exhibitionCatalog.load());
+  } else if (sectionName === "seguros") {
     loadInsuranceReport();
   } else if (sectionName === "inicio") {
     loadOverview();
@@ -207,10 +438,11 @@ async function selecionarEmpresa() {
   const results = await Promise.all([
     loadArtists(),
     artworkCatalog.load(),
-    exhibitionCatalog.load(),
+    carregarObrasParaExposicao(),
     loadOverview(),
     loadInsuranceReport()
   ]);
+  results.push(await exhibitionCatalog.load());
   const allLoaded = results.every((result) => result === true);
   showCompanyMessage(
     allLoaded
@@ -730,6 +962,9 @@ function setupEntityCrud(config) {
   const resetForm = () => {
     editingId = null;
     form.reset();
+    if (config.name === "exposição") {
+      limparObrasSelecionadas();
+    }
     heading.textContent = `Nova ${config.name}`;
     idReference.textContent = "";
     idReference.hidden = true;
@@ -744,7 +979,7 @@ function setupEntityCrud(config) {
     if (records.length === 0) {
       const row = document.createElement("tr");
       const cell = document.createElement("td");
-      cell.colSpan = config.fields.length + 2;
+      cell.colSpan = config.fields.length + 2 + (config.hasAdditionalColumn ? 1 : 0);
       cell.className = "table-empty-cell";
       cell.textContent = config.emptyMessage;
       row.append(cell);
@@ -760,6 +995,25 @@ function setupEntityCrud(config) {
       config.fields.forEach(({ key, format }) => {
         appendTextCell(row, format ? format(record[key]) : record[key]);
       });
+      if (config.name === "exposição") {
+        const artworksCell = document.createElement("td");
+        const artworkNames = exhibitionArtworkNames(record);
+        if (artworkNames.length === 0) {
+          artworksCell.textContent = "Nenhuma obra vinculada";
+          artworksCell.className = "muted";
+        } else {
+          const tags = document.createElement("div");
+          tags.className = "exhibition-artwork-list";
+          artworkNames.forEach((name) => {
+            const tag = document.createElement("span");
+            tag.className = "exhibition-artwork-chip";
+            tag.textContent = name;
+            tags.append(tag);
+          });
+          artworksCell.append(tags);
+        }
+        row.append(artworksCell);
+      }
 
       const actionsCell = document.createElement("td");
       const actions = document.createElement("div");
@@ -801,6 +1055,26 @@ function setupEntityCrud(config) {
       const value = record[key];
       input.value = type === "date" && value ? String(value).slice(0, 10) : value ?? "";
     });
+    if (config.name === "exposição") {
+      const links = exhibitionArtworkReferences(record);
+      obrasSelecionadas.splice(0, obrasSelecionadas.length);
+      links.forEach((reference) => {
+        const id = exhibitionArtworkId(reference);
+        if (id === null || obrasSelecionadas.some((item) => String(item.id) === String(id))) {
+          return;
+        }
+        const artwork = obrasDisponiveis.find((item) => String(item.id) === String(id));
+        obrasSelecionadas.push({
+          id,
+          texto: exhibitionArtworkTitle(reference) ||
+            artwork?.titulo || artwork?.title || `Obra ${id}`
+        });
+      });
+      renderObrasSelecionadas();
+      exhibitionArtworkSearch.value = "";
+      exhibitionArtworkResults.replaceChildren();
+      exhibitionArtworkResults.hidden = true;
+    }
     heading.textContent = `Editar ${config.name}`;
     idReference.textContent = `ID ${config.name}: ${record.id}`;
     idReference.hidden = false;
@@ -843,15 +1117,14 @@ function setupEntityCrud(config) {
       return [key, type === "number" ? Number(value) : value];
     }));
 
-    if (config.name === "exposição") {
-
-  const obrasSelecionadas =
-    Array.from(
-      document.getElementById("exhibition-obras").selectedOptions
-    ).map(option => Number(option.value));
-
-  fields.obrasIds = obrasSelecionadas;
-}
+    const isExhibition = config.name === "exposição";
+    if (isExhibition) {
+      if (fields.dataInicio > fields.dataFim) {
+        showFormMessage("A data de início deve ser anterior ou igual à data de término.", true);
+        return;
+      }
+      fields.obrasIds = obrasSelecionadas.map((obra) => obra.id);
+    }
 
     let payload = fields;
     let path = config.path;
@@ -868,8 +1141,61 @@ function setupEntityCrud(config) {
     }
 
     submitButton.disabled = true;
-    submitButton.textContent = editingId === null ? "Cadastrando…" : "Salvando…";
+    submitButton.textContent = isExhibition
+      ? "Verificando disponibilidade…"
+      : editingId === null ? "Cadastrando…" : "Salvando…";
     try {
+      if (isExhibition) {
+        const response = await apiRequest(companyScopedPath(API_CONFIG.exhibitionsPath));
+        const exhibitions = extractCatalogList(response);
+        const newStart = dateToOrdinal(fields.dataInicio);
+        const newEnd = dateToOrdinal(fields.dataFim);
+
+        if (newStart === null || newEnd === null) {
+          showFormMessage("Informe um período válido para a exposição.", true);
+          return;
+        }
+
+        for (const exhibition of exhibitions) {
+          if (editingId !== null && String(exhibition.id) === String(editingId)) {
+            continue;
+          }
+
+          const existingArtworkIds = new Set(
+            exhibitionArtworkReferences(exhibition)
+              .map(exhibitionArtworkId)
+              .filter((id) => id !== null)
+              .map(String)
+          );
+          const conflictingArtwork = obrasSelecionadas.find(
+            (artwork) => existingArtworkIds.has(String(artwork.id))
+          );
+          if (conflictingArtwork) {
+            const existingStart = dateToOrdinal(exhibition.dataInicio);
+            const existingEnd = dateToOrdinal(exhibition.dataFim);
+            if (existingStart === null || existingEnd === null) {
+              showFormMessage(
+                "Não foi possível validar o período de uma exposição existente. Atualize os dados e tente novamente.",
+                true
+              );
+              return;
+            }
+
+            const datesOverlap = newStart <= existingEnd && newEnd >= existingStart;
+            if (!datesOverlap) {
+              continue;
+            }
+
+            showFormMessage(
+              `A obra "${conflictingArtwork.texto}" já está vinculada a uma exposição no período informado.`,
+              true
+            );
+            return;
+          }
+        }
+      }
+
+      submitButton.textContent = editingId === null ? "Cadastrando…" : "Salvando…";
       await apiRequest(path, { method, body: payload });
       resetForm();
       const refreshed = await load();
@@ -1207,38 +1533,24 @@ async function loadOverview() {
 }
 
 async function carregarObrasParaExposicao() {
-
-  const select = document.getElementById("exhibition-obras");
-
-  if (!select) {
-    return;
-  }
-
   try {
-
-    const response = await apiRequest(
-      companyScopedPath(API_CONFIG.artworksPath)
-    );
-
-    const obras = Array.isArray(response)
-      ? response
-      : extractCatalogList(response);
-
-    select.innerHTML = "";
-
-    obras.forEach((obra) => {
-
-      const option = document.createElement("option");
-
-      option.value = obra.id;
-
-      option.textContent =
-        `${obra.id} - ${obra.titulo}`;
-
-      select.appendChild(option);
-    });
-
+    const response = await apiRequest(companyScopedPath(API_CONFIG.artworksPath));
+    obrasDisponiveis = extractCatalogList(response);
+    const message = document.querySelector("#exhibition-form-message");
+    if (message.textContent.startsWith("Não foi possível carregar as obras")) {
+      message.textContent = "";
+      message.classList.remove("message-error");
+      message.setAttribute("role", "status");
+      message.hidden = true;
+    }
+    return true;
   } catch (error) {
-    console.error("Erro ao carregar obras", error);
+    const message = document.querySelector("#exhibition-form-message");
+    message.textContent = `Não foi possível carregar as obras para seleção: ${error.message}`;
+    message.classList.add("message-error");
+    message.setAttribute("role", "alert");
+    message.hidden = false;
+    return false;
   }
 }
+

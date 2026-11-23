@@ -302,24 +302,18 @@
 
           <label for="exhibition-dataFim">Data de término</label>
           <input id="exhibition-dataFim" name="dataFim" type="date" required>
-          <label for="exhibition-obras">
-  Obras da Exposição
-</label>
 
-<select id="exhibition-obras"
-        name="obrasIds"
-        multiple
-        size="6">
-</select>
+          <p class="exhibition-field-label exhibition-full-row">Obras vinculadas</p>
+          <div id="obras-selecionadas" class="obras-tags exhibition-full-row"
+            role="list" aria-label="Obras selecionadas"></div>
 
-<small class="muted">
-  Segure CTRL para selecionar mais de uma obra.
-</small>
-
-<input id="exhibition-dataFim"
-       name="dataFim"
-       type="date"
-       required>
+          <label class="exhibition-full-row" for="obra-busca">Adicionar obra</label>
+          <div class="exhibition-search exhibition-full-row">
+            <input id="obra-busca" type="search" placeholder="Pesquisar obra..."
+              autocomplete="off" aria-autocomplete="list" aria-controls="obras-encontradas">
+            <div id="obras-encontradas" class="exhibition-artwork-results"
+              role="listbox" aria-label="Resultados da pesquisa" hidden></div>
+          </div>
 
           <p id="exhibition-form-message" class="message" role="status" aria-live="polite" hidden></p>
           <div class="catalog-form-actions">
@@ -352,6 +346,7 @@
                 <th scope="col">Local</th>
                 <th scope="col">Data de Início</th>
                 <th scope="col">Data de Fim</th>
+                <th scope="col">Obras Vinculadas</th>
                 <th scope="col">Ações</th>
               </tr>
             </thead>
