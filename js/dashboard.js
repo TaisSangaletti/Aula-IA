@@ -56,26 +56,6 @@ const artworkCatalog = setupEntityCrud({
   ]
 });
 const exhibitionCatalog = setupEntityCrud({
-  name: "exposição",
-  path: API_CONFIG.exhibitionsPath,
-  formId: "exhibition-form",
-  headingId: "exhibition-form-heading",
-  idReferenceId: "exhibition-id-reference",
-  formMessageId: "exhibition-form-message",
-  submitButtonId: "exhibition-submit-button",
-  cancelButtonId: "exhibition-cancel-button",
-  tableBodyId: "exhibitions-table-body",
-  listMessageId: "exhibitions-list-message",
-  emptyMessage: "Nenhuma exposição cadastrada.",
-  createLabel: "Cadastrar exposição",
-  includeIdInUpdate: false,
-  fields: [
-    { key: "nome", label: "Nome", type: "text" },
-    { key: "local", label: "Local", type: "text" },
-    { key: "dataInicio", label: "Data de início", type: "date" },
-    { key: "dataFim", label: "Data de término", type: "date" }
-  ]
-});
 
 // Proteção simples de rota no frontend: sem token, volte ao login.
 if (!localStorage.getItem("authToken")) {
@@ -118,9 +98,10 @@ function showSection(sectionName) {
     loadArtists();
   } else if (sectionName === "obras") {
     artworkCatalog.load();
-  } else if (sectionName === "exposicoes") {
+  else if (sectionName === "exposicoes") {
     exhibitionCatalog.load();
-  } else if (sectionName === "seguros") {
+    carregarObrasParaExposicao();
+} else if (sectionName === "seguros") {
     loadInsuranceReport();
   } else if (sectionName === "inicio") {
     loadOverview();
@@ -862,6 +843,16 @@ function setupEntityCrud(config) {
       return [key, type === "number" ? Number(value) : value];
     }));
 
+    if (config.name === "exposição") {
+
+  const obrasSelecionadas =
+    Array.from(
+      document.getElementById("exhibition-obras").selectedOptions
+    ).map(option => Number(option.value));
+
+  fields.obrasIds = obrasSelecionadas;
+}
+
     let payload = fields;
     let path = config.path;
     let method = "POST";
@@ -1213,4 +1204,41 @@ async function loadOverview() {
 
   showOverviewMessage("Indicadores atualizados.");
   return true;
+}
+
+async function carregarObrasParaExposicao() {
+
+  const select = document.getElementById("exhibition-obras");
+
+  if (!select) {
+    return;
+  }
+
+  try {
+
+    const response = await apiRequest(
+      companyScopedPath(API_CONFIG.artworksPath)
+    );
+
+    const obras = Array.isArray(response)
+      ? response
+      : extractCatalogList(response);
+
+    select.innerHTML = "";
+
+    obras.forEach((obra) => {
+
+      const option = document.createElement("option");
+
+      option.value = obra.id;
+
+      option.textContent =
+        `${obra.id} - ${obra.titulo}`;
+
+      select.appendChild(option);
+    });
+
+  } catch (error) {
+    console.error("Erro ao carregar obras", error);
+  }
 }

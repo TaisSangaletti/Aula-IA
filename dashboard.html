@@ -302,6 +302,24 @@
 
           <label for="exhibition-dataFim">Data de término</label>
           <input id="exhibition-dataFim" name="dataFim" type="date" required>
+          <label for="exhibition-obras">
+  Obras da Exposição
+</label>
+
+<select id="exhibition-obras"
+        name="obrasIds"
+        multiple
+        size="6">
+</select>
+
+<small class="muted">
+  Segure CTRL para selecionar mais de uma obra.
+</small>
+
+<input id="exhibition-dataFim"
+       name="dataFim"
+       type="date"
+       required>
 
           <p id="exhibition-form-message" class="message" role="status" aria-live="polite" hidden></p>
           <div class="catalog-form-actions">
